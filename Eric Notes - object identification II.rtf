@@ -1,0 +1,146 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf600
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red5\green68\blue254;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;\cssrgb\c0\c38136\c99824;}
+\margl1440\margr1440\vieww14140\viewh13040\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ri-2900\pardirnatural\partightenfactor0
+
+\f0\b\fs32 \cf0 Eric Shea-Brown & Stefano \cf2 \expnd0\expndtw0\kerning0
+Recanatesi
+\b0 \cf0 \kerning1\expnd0\expndtw0 \
+\'93Identification of Objects as Latent Variables in Static Visual Scenes\'94\
+Feb. 8, 2019\
+\
+\
+\ul Overall Approach\ulnone \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ri-2900\pardirnatural\partightenfactor0
+
+\i\b \cf0 Goal
+\i0\b0 : to generalize the RNN framework developed by Stefano and Eric to the case of learning objects as a key component in the latent space of static image ensembles explored by eye movements\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ri-2900\pardirnatural\partightenfactor0
+\cf0 \ul \ulc0 Ingredients\ulnone \
+1) Choose a set of 2D images\
+2) Choose statistics for eye movements\
+3) Choose a method for encoding the 2D image into a set of neural activity\
+\
+\ul Task\ulnone \
+1) Build an RNN with two kinds of input:\
+	A. Exact copy of the eye movements vector at time, t\
+	B. Population activity from the encoding layer of neurons at time, t\
+
+\i Note
+\i0 : inputs arrive in each RNN unit through fixed, random-weight feedforward synapses that randomly combine the eye movement vector and encoding layer\
+\
+2) Train the RNN to predict the population activity of the encoding layer at time, t+1\
+	\'95 use backpropgation algorithm\
+	\'95 create a readout layer with fixed, random-weight output synapses from RNN\
+	\'95 each readout unit is assigned to predict one unit in the encoding layer\
+	\'95 define error as sum of squared difference between readout & encoding neurons\
+\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ri-2900\pardirnatural\partightenfactor0
+\cf0 \ul \ulc0 Choice of Eye Movements\ulnone \
+\
+Fixational eye movements: random walk\
+\'95\'a0take parameters from Xaq\'92s paper\
+\
+Saccades: choose random vectors\
+\'95 take some statistics from papers\
+\'95 choose a time interval: e.g., uniform in the range of 0.25 \'96 0.5 sec\
+\'95 choose a random direction: uniform over 360\'b0\
+\'95 choose a random amplitude: use data from papers\
+\
+Makes no sense to get any more complicated, as neuroscience cannot predict human or monkey saccades with any satisfaction\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ri-2900\pardirnatural\partightenfactor0
+\cf0 \
+
+\i Overall structure
+\i0 : \
+\'95\'a0for each image, the eye movement trajectory \'93looks at it\'94\
+\'95 \'93looking at it\'94 means choose a sequence of 5-10 saccades from that ensemble\
+\
+
+\i Technical issue:
+\i0  what if your randomly chosen movement takes you out of image?\
+\'95 approach #1: wrap-around boundary conditions\
+  \'96 in this case, you can make the first saccade to a random location\
+\'95 approach #2: if movement takes you outside the 2D image, then choose again\
+  \'96 in this case, you should probably make the first saccade to the image center\'85\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ri-2900\pardirnatural\partightenfactor0
+\cf0 \
+\
+\ul Choice of the Image Ensemble\ulnone \
+\
+Level 1: grey background, add chosen \'93objects\'94 by occlusion; greyscale images\
+\'95 possible choice of objects: dead leaves model?\
+\'95 better idea: complex objects, like in monkey experiments on IT cortex\
+  \'96 examples: fruit, tools, cars, faces, etc.\
+\
+Level 2: natural image with objects pasted on (\'93Where is Waldo?\'94)\
+\'95 RNN should learn some objects from the actual scene (not pasted on)\
+\
+Image Ensemble:\
+\'95 choose a larger set of objects, say 100\
+\'95 for each image, randomly choose to display a subset, say 50\
+  \'96 
+\i maybe
+\i0 : ask an IT lab if we can use their image set??\
+\'95 each object, i, has: \
+  \'96 random location, \{x_i, y_i\}\
+  \'96 random size, s_i\
+  \'96 
+\i maybe
+\i0 : random depth, z_i (used to determine occlusion)\
+  \'96 
+\i maybe
+\i0 : random rotation, theta_i\
+\
+
+\i Basic logic:
+\i0  the image ensemble presents a fixed, discrete set of objects, each having a range of continuous variables\
+\
+
+\i\b Hypothesis #1
+\i0\b0 : units in trained RNN learn to encode the continuous variables?\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ri-2900\pardirnatural\partightenfactor0
+
+\i\b \cf0 Hypothesis #2
+\i0\b0 : units in trained RNN (also) learn to encode the object index?\
+\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ri-2900\pardirnatural\partightenfactor0
+\cf0 \ul Choices of Sensory Encoding\ulnone \
+\
+Level 1: mosaic array of fixed spatial filters\
+\'95 no explicit temporal dynamics (i.e. all dynamics driven by eye movements)\
+\'95 center-surround filters\
+\'95 like one type of retinal ganglion cell\
+\'95 also like a convolutional network\
+\
+Level 2: give each ganglion cell spatial and temporal dynamics, like real cells\
+\'95 qualitative difference: temporal dynamics have delays; effect on predictions?\
+\'95 space and time are separable\
+\'95 like the receptive field center mechanism (i.e. not so realistic for the surround)\
+\cf3 [MJB: We never discussed this point on Wed.  I am inclined to think this encoding delay does not matter, because the RNN will try to predict the activity of the encoding layer itself at time, t+1, rather than the stimulus.]\cf0 \
+\
+
+\i Upshot
+\i0 :\'a0I think I prefer Level 1\
+\
+
+\i Issue
+\i0 : if the encoding layer has a perfectly ordered array of identical spatial filters, then maybe the readouts from the RNN should also have some repeated, convolutional structure??\
+\\\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+}
