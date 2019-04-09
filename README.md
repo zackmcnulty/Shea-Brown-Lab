@@ -1,7 +1,8 @@
 
 
+# Shea-Brown Research Lab
 
-# RNN Latent Structure
+### RNN Latent Structure
 
 In the paper [Signatures and mechanisms of low-dimensional neural predictive manifolds](https://www.biorxiv.org/content/10.1101/471987v1) by Stefano Recanatesi et al. they found evidence that
 training a recurrent neural network (RNN) in a predictive task allowed it to extract some of the underlying structure of the system. More specifically, given an agent that moves throughout some sort of
