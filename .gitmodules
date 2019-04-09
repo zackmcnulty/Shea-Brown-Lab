@@ -1,0 +1,3 @@
+[submodule "RNN_latent_structure/learning_materials/neural_networks/neural-networks-and-deep-learning"]
+	path = RNN_latent_structure/learning_materials/neural_networks/neural-networks-and-deep-learning
+	url = https://github.com/mnielsen/neural-networks-and-deep-learning.git
