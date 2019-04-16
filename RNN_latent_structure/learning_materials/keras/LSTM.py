@@ -6,8 +6,7 @@ https://machinelearningmastery.com/time-series-prediction-lstm-recurrent-neural-
 import pandas
 import time
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
+import numpy
 import math
 from keras.models import Sequential
 from keras.layers import Dense
@@ -17,13 +16,13 @@ from sklearn.metrics import mean_squared_error
 
 dataframe = pandas.read_csv('input_files/international-airline-passengers.csv', usecols=[1], engine='python', skipfooter=3)
 print(dataframe.head())
-plt.plot(dataset)
+plt.plot(dataframe)
 plt.show()
 
-# ===============
+# ===============================
 
 # fix the seed for reproducibility
-np.random.seed(7)
+numpy.random.seed(7)
 
 dataset = dataframe.values
 dataset = dataset.astype('float32')
@@ -53,7 +52,7 @@ def create_dataset(dataset, look_back=1):
 
 # reshape into X=t and Y=t+1
 # creates a series of X,Y pairs where X = value at time t, Y = value at time t+1
-look_back = 1
+look_back = 3
 trainX, trainY = create_dataset(train, look_back)
 testX, testY = create_dataset(test, look_back)
 
@@ -64,9 +63,21 @@ testX = numpy.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
 
 
 # create and fit the LSTM network
+
 model = Sequential()
+
+# generates a layer of cells that behave as our recurrent network part; they accept some input layer
+# and perform a series of recurrent updates; Unlike other cell types, the LSTM cells store a "memory" of
+# previous information flowing through them which affects their activity. Here we add 4 of these such
+# nodes.
 model.add(LSTM(4, input_shape=(1, look_back)))
+
+# Dense(# of neurons in layer) is just adding a layer of your basic neurons; each neuron in this layer
+# just takes in the outputs of the previous layer as inputs, weights these values according to some kernel (weight matrix)
+# and applies an activation function
 model.add(Dense(1))
+
+# loss defines how you want to measure the error between predicted value and actual value in order to train the model
 model.compile(loss='mean_squared_error', optimizer='adam')
 model.fit(trainX, trainY, epochs=100, batch_size=1, verbose=2)
 

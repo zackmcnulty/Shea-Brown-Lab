@@ -30,6 +30,7 @@ def get_activations(model, layer, X_batch):
     return activations
 
 # function to create one-hot representation for the actions
+# matrix with ones and zeros = orthogonal
 def onehot(x):
 	x_unique = np.unique(x)
 	y = np.zeros((x.shape[0],x_unique.shape[0]))
@@ -64,6 +65,8 @@ def unbatch_time(x_seq):
 ## PARSE PARAMETERS AND DATA
 
 # get parser parameters
+
+# allow you to pass in parameters through command line with keywords (i.e. --epochs 1)
 parser = argparse.ArgumentParser(description='Process parameters')
 parser.add_argument('--epochs', default=50, type=int, dest='N_epochs', help='number of super-epochs where to save files')
 parser.add_argument('--epoch_ini', default=1, type=int, dest='epoch_ini', help='number of initial epoch for saving purposes')
@@ -106,9 +109,10 @@ N_traj = 500
 N_samples = int(N_tot/N_batch)
 
 # create the training set with batched data
+# y are shifted over by one --> predictive case
 x = np.concatenate((observations, actions_gain*actions_onehot), axis = 1)[:-1]
 y = observations[1:]
-#y = observations[:-1]
+#y = observations[:-1] # non-predictive case (auto-encode)
 x_batched=batch_time(x,N_traj)
 y_batched=batch_time(y, N_traj)
 
@@ -117,12 +121,27 @@ y_batched=batch_time(y, N_traj)
 model = Sequential()
 model.add(SimpleRNN(	units = N_h, 
 			batch_input_shape = (N_batch, N_traj, N_x+N_a), 
+                        # kernel = feed-forward network weights (input weights)
 			kernel_initializer = initializers.random_normal(stddev=0.02), 
+
+                        # recurrent weights
 			recurrent_initializer=initializers.identity(), 
+
+                        # True: do not reset/reinitialize weights after each round of training?
 			stateful = True,
+
+                        # ??
 			return_sequences=True,	
+
+                        # neuron activation function
 			activation='sigmoid',
+
+
 			activity_regularizer = l1(sparsity_coeff)))
+
+# ordering is important; i.e. is there a sense of time. For images, this is not important.
+# Builds a wrapper class to Dense layer that helps handle time
+# wrapper: adds on to a class; gives it more properties. In this case, it is stores some information on time.
 model.add(TimeDistributed(Dense(N_x, kernel_initializer = initializers.random_normal(stddev=0.02),activation = 'linear')))
 
 # ## Reinitialize weights to loaded ones
@@ -141,10 +160,14 @@ model.layers[1].set_weights([weights['out_weight'][0,0].T, weights['out_bias'][0
 model.compile(loss='mean_squared_error', optimizer='rmsprop')
 
 ## TRAIN THE MODEL AND SAVE THE DATA
+
 # the callback call_stop is used to stop the training
+# Would stop after N epochs if not given
 call_stop = EarlyStopping(monitor='val_loss', min_delta=1e-4, patience=15, verbose=0, mode='auto')
 # the callback call_save saves the data in the end of each epoch
+# i.e. the weights of network during learning; pass in a lambda function
 call_save = LambdaCallback(on_epoch_end=lambda epoch, logs: 
+        # save as MATLAB data file; layers[0] = recurrent; layers[1] = output
 	scipy.io.savemat(filesave + 'weights_Ep'+ str(epoch+epoch_ini),	mdict={	  
                 'out_bias':model.layers[1].get_weights()[1].reshape(N_x,1), 
                 'out_weight':model.layers[1].get_weights()[0].T, 
@@ -161,7 +184,14 @@ call_save = LambdaCallback(on_epoch_end=lambda epoch, logs:
 
 
 # the callback call_lr reduces the learning ratio when learning doesn't improve
+# Adjusting the learning rate after each epoch; decrease as learning goes on.
+
+# pateince here must be > patience in call_stop
+# adjust learning rate faster than stoping learning.
 call_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=8, min_lr=0.000001,verbose=1)
 
 # train the model
+
+# callback = function you call at beginning or end of each epoch; to act during learning and make adjustments to the
+#           network
 history = model.fit(x_batched, y_batched, batch_size = N_batch, epochs=N_epochs, validation_split = validation_split, verbose=2, shuffle = False, callbacks = [call_stop, call_save, call_lr])#

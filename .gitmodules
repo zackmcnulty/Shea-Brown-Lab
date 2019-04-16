@@ -1,3 +1,9 @@
 [submodule "RNN_latent_structure/learning_materials/neural_networks/neural-networks-and-deep-learning"]
 	path = RNN_latent_structure/learning_materials/neural_networks/neural-networks-and-deep-learning
 	url = https://github.com/mnielsen/neural-networks-and-deep-learning.git
+[submodule "RNN_latent_structure/learning_materials/keras/recurrent-neural-networks"]
+	path = RNN_latent_structure/learning_materials/keras/recurrent-neural-networks
+	url = https://github.com/WillKoehrsen/recurrent-neural-networks.git
+[submodule "RNN_latent_structure/learning_materials/keras/five-video-classification-methods"]
+	path = RNN_latent_structure/learning_materials/keras/five-video-classification-methods
+	url = https://github.com/harvitronix/five-video-classification-methods.git
