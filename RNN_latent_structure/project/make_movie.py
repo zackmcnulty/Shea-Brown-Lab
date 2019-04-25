@@ -41,6 +41,23 @@ if len(objects) != len(shapes) or len(objects) != len(fill_colors) or len(object
 
 # ===============================================================================================================================
 
+# create temporary directories to save the frames/images that are generated
+os.system("mkdir tmp_images/")
+os.system("mkdir tmp_frames/")
+
+def save_frame(win, frame):
+    '''
+    Saves as an image the current graphics window
+    '''
+    # saves the current TKinter object in postscript format
+    win.postscript(file="tmp_frames/image.eps", colormode='color')
+
+    # Convert from eps format to gif format using PIL
+    img = NewImage.open("tmp_frames/image.eps")
+    img.save('tmp_images/frame{:05d}.gif'.format(frame), "gif")
+
+
+
 win_height = 200
 win_width = 100 # specify graphics window dimensions
 padding = 50 # how much white space to add around the edge of the window to avoid objects running off edge
@@ -59,6 +76,8 @@ for i, shape in enumerate(shapes):
     shape.setFill(fill_colors[i])
     shape.setOutline(outline_colors[i])
 
+    save_frame(win, 1)
+
 
 for frame in range(1, len(t_vals)):
     for i, shape in enumerate(shapes):
@@ -67,15 +86,17 @@ for frame in range(1, len(t_vals)):
         shape._move(dx, dy)
 
     win.redraw()
-    time.sleep(1/frame_rate)
+#    time.sleep(1/frame_rate)
+    save_frame(win, frame + 1)
 
 
-'''
+# Convert all these frames into a movie
+movie_fps = 10;
+movie_filename = 'movie_files/movie.mp4'
+os.system("ffmpeg -r {:d} -i ./tmp_images/frame%05d.png -vcodec mpeg4 -y {:s}".format(movie_fps, movie_filename))
 
-# saves the current TKinter object in postscript format
-win.postscript(file="image_files/image.eps", colormode='color')
+# delete the temporary folders created
+os.system('rm -rf tmp_images')
+os.system('rm -rf tmp_frames')
 
-# Convert from eps format to gif format using PIL
-img = NewImage.open("image_files/image.eps")
-img.save("image_files/blank.gif", "gif")
-'''
+
