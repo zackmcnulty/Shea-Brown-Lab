@@ -34,3 +34,17 @@ def f_vert_spring(initial_condition = [0,0,1], mass = 1, k = 1):
     dvdt = lambda x: -k/mass * x[1]
 
     return [lambda t, x: [dxdt(x), dydt(x), dvdt(x)], initial_condition]
+
+def f_both_spring(initial_condition = [0,0,1], mass = 1, k1 = 1, k2=1): 
+    ''' spring-mass system oscillating vertically AND horizontally centered at x,y = 0'''
+
+    if len(initial_condition) != 4:
+        raise ValueError('The 2D spring mass system expects four intial conditions: x,y, and velocity in x, velocity in y')
+
+    # x[0] = x position, x[1] = y position, x[2] = velocity
+    dxdt = lambda x: x[2]
+    dydt = lambda x: x[3] 
+    dvx_dt = lambda x: -k1/mass * x[0]
+    dvy_dt = lambda x: -k2/mass * x[1]
+
+    return [lambda t, x: [dxdt(x), dydt(x), dvx_dt(x), dvy_dt(x)], initial_condition]
