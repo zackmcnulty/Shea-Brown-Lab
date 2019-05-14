@@ -76,8 +76,8 @@ else: # ... for generating large batches of movies; uses .sh script
 
     objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=theta), )  
     shapes =  (Rectangle(Point(-3,-3), Point(3,3)), )
-    fill_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
-    outline_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
+    fill_colors = ['black']
+    outline_colors = ['black']
 
 
 
