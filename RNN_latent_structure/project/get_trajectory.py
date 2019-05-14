@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import time
 import dynamical_systems as ds
 
-def get_trajectories(objects, tspan = [0,10], num_steps = 1000, tstep = None):
+
+def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None):
     '''
     Calculates trajectories of the given objects and their specified dynamics throughout the system.
     Normalizes all trajectories so they lie in the grid [0,1] x [0, 1] for convenient plotting
@@ -59,6 +60,13 @@ def get_trajectories(objects, tspan = [0,10], num_steps = 1000, tstep = None):
     ymax = np.amax(all_y_vals[1, :, :])
     ymin = np.amin(all_y_vals[1, :, :])
 
+    # TODO: the x and Y values should be normalized together. This avoids distorting the motion in any given direction
+
+    all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
+    all_y_vals[1, :, :] = (all_y_vals[1, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
+
+    # Normalize x, y separately.
+    '''
     if xmax != xmin:
         all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - xmin) / (xmax - xmin)
 
@@ -69,6 +77,7 @@ def get_trajectories(objects, tspan = [0,10], num_steps = 1000, tstep = None):
         all_y_vals[1, :, :] = (all_y_vals[1,:,:] - ymin) / (ymax - ymin)
     else:
         all_y_vals[1, :, :] = 0.5
+    '''
 
     # tvals, x values, y values    where both x/y values are in the form  
     # [ object 1 x values
@@ -79,9 +88,11 @@ def get_trajectories(objects, tspan = [0,10], num_steps = 1000, tstep = None):
 # Plot objects moving throughout system ========================================================
 def run_example():
     ''' Plots an example of the output of this code'''
-    objects = [ds.f_horz_spring(initial_condition = [1,0,1]), \
-            ds.f_vert_spring(mass=5,k=1, initial_condition=[2,0,2]), \
-            ds.f_horz_spring(initial_condition = [1,0,1])]
+    #objects = [ds.f_horz_spring(initial_condition = [1,0,1]), \
+    #        ds.f_vert_spring(mass=5,k=1, initial_condition=[2,0,2]), \
+    #        ds.f_horz_spring(initial_condition = [1,0,1])]
+
+    objects = (ds.f_angled_spring(initial_condition = [0,0, 10], theta = np.pi/12 ), )
 
     (t_vals, x_vals, y_vals) = get_trajectories(objects, tstep = 0.1)
 

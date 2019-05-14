@@ -27,28 +27,59 @@ import time
 from PIL import Image as NewImage
 import os
 import sys
+import argparse
 
 
 # Define objects and their motion  ==============================================================================================
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-random', action='store_true')
+parser.add_argument('-name', default='model')
+parser.add_argument('-train', action='store_true')
+parser.add_argument('-p_test', type=float, default=0.2) 
+args = parser.parse_args()
+
 # each object will be specified by (motion = (dynamics, initial_condition), shape)
 # Shapes will be specified as graphics objects
-
 # NOTE: The depth of objects in the image is specified by the order they appear in "objects" below.
 #       Shapes earlier in "objects" appear deeper in the image
-objects = (ds.f_horz_spring(initial_condition=[0.5,0.5,1]), \
-           ds.f_vert_spring(k=10,initial_condition=[0,0,1]), \
-           ds.f_both_spring(initial_condition = [0,0,1,-1], k1=1, k2=1/3) ) 
+
+if not args.random: # specify the objects in this program 
+    objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=np.pi/4 ), )  
+
+    # NOTE: set all shapes to start at centered (0,0)
+    shapes =  (Rectangle(Point(-5,-5), Point(5,5)), )
+
+    # NOTE: Colors can be strings ('black', 'blue', 'green', 'black', 'yellow') or RBG in the form of a tuple (r, g, b)
+
+    # Randomly choose colors for the objects.
+    fill_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
+    outline_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
 
 
-# NOTE: set all shapes to start at centered (0,0)
-shapes =  [Circle(Point(0,0), radius=10), Rectangle(Point(-5,-5), Point(5,5)), Circle(Point(0,0), radius=20)]
 
-# NOTE: Colors can be strings ('black', 'blue', 'green', 'black', 'yellow') or RBG in the form of a tuple (r, g, b)
+else: # ... for generating large batches of movies; uses .sh script
+    #NOTE: See the file generate_data.sh for more information about
+    # what I used this 'else' section for
 
-# Randomly choose colors for the objects.
-fill_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
-outline_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
+
+    low_train = np.pi * args.p_test
+    high_train = np.pi - low_train
+    low_test = -1 * low_train
+    high_test = low_train
+
+    if args.train:
+        theta = np.random.uniform(low=low_train, high=high_train)
+        theta = np.pi/4
+    else:
+        theta = np.random.uniform(low=low_test, high=high_test)
+
+    objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=theta), )  
+    shapes =  (Rectangle(Point(-3,-3), Point(3,3)), )
+    fill_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
+    outline_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
+
+
 
 if len(objects) != len(shapes) or len(objects) != len(fill_colors) or len(objects) != len(outline_colors):
     raise ValueError("The number of objects, shapes, and colors specified must all match.")
@@ -59,17 +90,17 @@ if len(objects) != len(shapes) or len(objects) != len(fill_colors) or len(object
      
 
 # Number of frames to generate for the movie and the frames per second for the movie respectively.
-num_frames = 100
-movie_fps = 10
+num_frames = 35
+movie_fps = 5
 
 # Specify properties of the graphics window; Below allows you to control the size in pixels of
 # the window (and hence the resolution in the video)
 # The padding feature generates a an area of white space above/below and to the left/right of the window.
 # I found this helpful for keeping the objects from running off the edge of the screen. As their motion
 # moves around their center so if the object is too big it will go over the edge.
-win_height = 200
-win_width = 500 
-padding = 50 
+win_height = 50
+win_width = 50 
+padding = 5
 
 
 
@@ -106,7 +137,7 @@ def save_frame(win, frame):
 
 # check if the movie filename already exists to avoiding overwriting files.
 try:
-    movie_filename = sys.argv[1]
+    movie_filename = args.name
     if not os.path.exists('./movie_files'):
        os.system('mkdir ./movie_files') 
     elif os.path.exists('./movie_files/' + movie_filename + ".mp4"):
