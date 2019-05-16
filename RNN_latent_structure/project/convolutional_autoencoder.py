@@ -42,20 +42,25 @@ for encoding/decoding.
 # SimpleRNN: a fully connected recurrent neural network. Output of network is fed back in as input (with
 #            a weights matrix)
 # Reshape: Layer that reshapes inputs to desired shape
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape
+# ZeroPadding2D: pads input with zeros (so its dimensions are divisible by 2^k for reduction by max pooling)
+# Cropping2D: undos this ^ by removing padding
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D
 from keras.models import Model, Sequential
 from keras import backend as K
 import os
 import sys
 from pathlib import Path
+import numpy as np
+import cv2 # for reading videos
+#import matplotlib
+#matplotlib.use("TkAgg")
+from matplotlib import pyplot as plt
 
 # note now we are not going to vectorize our data because we care about the local structure
 # instead, input will be fed in as matrices (i.e. frame by frame)
-image_shape = [50,50] #height in pixels, width in pixels of each frame
-epochs = 50
+epochs = 1
 batch_size = 128
-train_size = 60000
-model_name = 'test_model'
+model_name = 'conv_autoencoder_MSE'
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
 
 # Save the Keras model
@@ -65,6 +70,62 @@ if model_filename.exists():
     answer = input('File name ' + model_filename.name + ' already exists. Overwrite [y/n]? ')
     if not 'y' in answer.lower():
         sys.exit()
+
+# Load movie clips ===============================================================================`
+
+num_train_movies = 0
+num_test_movies = 0
+
+# count movies first so I can pre-allocate space in numpy arrays
+for i, f in enumerate(os.scandir('./movie_files')):
+    if f.name.startswith('train'):
+        num_train_movies += 1
+    elif f.name.startswith('test'):
+        num_test_movies += 1
+
+    # should be the same for all movies
+    if i == 0:  
+        cap = cv2.VideoCapture(f.path)
+        frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+image_shape = [frameHeight, frameWidth]
+    
+x_train = np.empty((frameCount * num_train_movies, frameHeight, frameWidth, 1))
+x_test = np.empty((frameCount * num_test_movies, frameHeight, frameWidth, 1))
+
+train_ind = 0
+test_ind = 0
+for f in os.scandir('./movie_files'):
+    cap = cv2.VideoCapture(f.path)
+    while True: 
+        # ret is a boolean that captures whether or not the frame was read properly (i.e.
+        # whether or not we have reached end of video and run out of frames to read)
+        ret , frame = cap.read()
+        if not ret: break
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#        cv2.imshow('frame', gray)
+
+        if f.name.startswith('train'):
+            x_train[train_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            train_ind += 1
+        elif f.name.startswith('test'):
+            x_test[test_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            test_ind += 1
+
+#x_test = x_test.astype(int)
+#print(x_test.shape)
+#print(x_test[0, :, :])
+
+#plt.plot([0,1], [0,1])
+#plt.show()
+
+plt.imshow(x_test[0].reshape((frameHeight,frameWidth)))
+plt.show()
+
+
 
 
 # convert the image into a lower dimensional representation
@@ -91,32 +152,41 @@ if model_filename.exists():
 image_shape.append(1)
 
 model = Sequential()
-model.add(Conv2D(16, (3,3), activation='relu', padding='same', input_shape = image_shape))         # (28, 28, 1) --> (28, 28, 16) 
-model.add(MaxPooling2D((2,2), padding='same'))                          # (28, 28, 16) --> (14, 14, 16)
-model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (14,14, 16) --> (14,14, 8)
-model.add(MaxPooling2D((2,2), padding = 'same'))                        # (14, 14, 8) --> (7,7, 8)
-model.add(Conv2D(1, (3,3), activation = 'relu', padding = 'same'))      # (7,7,8) --> (7,7,1)
 
+# padding prevents the change of shape due to down/upsampling
+model.add(ZeroPadding2D(((2,1),(2,1)), input_shape = image_shape))  # (61,61, 1) --> (64,64, 1)
+
+model.add(Conv2D(16, (3,3), activation='relu', padding='same'))         # (64, 64, 1) --> (64, 64, 16) 
+model.add(MaxPooling2D((2,2), padding='same'))                          # (64, 64, 16) --> (32, 32, 16)
+model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (32,32, 16) --> (32,32, 8)
+model.add(MaxPooling2D((2,2), padding = 'same'))                        # (32, 32, 8) --> (16,16, 8)
+model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (16,16,8) --> (16,16,4)
+model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
+model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (16,16,8) --> (16,16,4)
+model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
+model.add(Conv2D(1, (3,3), activation = 'relu', padding = 'same'))      # (4,4,4) --> (4,4,1)
 
 
 # decode the lower dimensional representation back into an image
-model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (7,7,1) --> (7,7,8)
-model.add(UpSampling2D((2,2)))                                    # (7,7,8) -> (14,14,8)
-model.add(Conv2D(16, (3,3), activation = 'relu', padding='same'))# (14,14,8) -> (14,14,16)
-model.add(UpSampling2D((2,2)))                                    # (14,14,16) -> (28,28,16)
+model.add(Conv2D(4,(3,3), activation = 'relu', padding = 'same')) # (4,4,1) --> (4,4,4)
+model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
+model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (4,4,1) --> (4,4,4)
+model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
+model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (16,16,4) --> (16,16,8)
+model.add(UpSampling2D((2,2)))                                    # (16,16,8) -> (32,32,8)
+model.add(Conv2D(16, (3,3), activation = 'relu', padding='same'))# (32,32,8) -> (32,32,16)
+model.add(UpSampling2D((2,2)))                                    # (32,32,16) -> (64,64,16)
 # want to use sigmoid as our final activation function to make the output more
-model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same')) # (28,28,16) -> (28,28, 1)
+model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same')) # (64,64,16) -> (64,64, 1)
 
-for layer in model.layers:
-    print(layer.output_shape)
+model.add(Cropping2D(((2,1),(2,1)))) # (64,64,1) -> (61,61, 1)
 
-model.compile(optimizer = 'adadelta', loss='binary_crossentropy')
+model.compile(optimizer = 'adadelta', loss='mean_squared_error')
 
-# Load movie clips ===============================================================================`
+#for layer in model.layers:
+#    print(layer.output_shape)
 
-import numpy as np
-
-
+# ================================================================================================
 # fit model (train network)!
 model.fit(x_train, x_train,
           epochs = epochs, 
@@ -129,11 +199,12 @@ model.save(str(model_filename))
 
 # make predictions!
 predicted_images = model.predict(x_test)
+true_images = x_test
 
+print(predicted_images[0])
+print(true_images[0])
 
 # plot stuff ====================================================================================
-import matplotlib.pyplot as plt
-
 
 n = num_results_shown # number of digits to display
 
@@ -142,7 +213,7 @@ for i in range(n):
 
     # display original (in top row)
     ax = plt.subplot(2, n, i+1) # which subplot to work with; 2 rows, n columns, slot i+1
-    plt.imshow(x_test[i].reshape(image_shape[0], image_shape[1]))
+    plt.imshow(true_images[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
@@ -155,7 +226,4 @@ for i in range(n):
     ax.get_yaxis().set_visible = False
 
 plt.show()
-
-
-
 
