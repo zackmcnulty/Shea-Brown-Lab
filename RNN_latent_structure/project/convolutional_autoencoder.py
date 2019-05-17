@@ -58,7 +58,7 @@ from matplotlib import pyplot as plt
 
 # note now we are not going to vectorize our data because we care about the local structure
 # instead, input will be fed in as matrices (i.e. frame by frame)
-epochs = 1
+epochs = 50
 batch_size = 128
 model_name = 'conv_autoencoder_MSE'
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
@@ -181,7 +181,7 @@ model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same')) # (64,64,16) -
 
 model.add(Cropping2D(((2,1),(2,1)))) # (64,64,1) -> (61,61, 1)
 
-model.compile(optimizer = 'adadelta', loss='mean_squared_error')
+model.compile(optimizer = 'adam', loss='binary_crossentropy')
 
 #for layer in model.layers:
 #    print(layer.output_shape)

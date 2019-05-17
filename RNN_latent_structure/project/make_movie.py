@@ -70,7 +70,6 @@ else: # ... for generating large batches of movies; uses .sh script
 
     if args.train:
         theta = np.random.uniform(low=low_train, high=high_train)
-        theta = np.pi/4
     else:
         theta = np.random.uniform(low=low_test, high=high_test)
 
