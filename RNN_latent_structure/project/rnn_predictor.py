@@ -13,6 +13,7 @@ data they are compression, they should work better than a standard feedforward l
 for encoding/decoding. 
 
 '''
+# TODO: Stagger the outputs so that they are N frames ahead of input
 
 # This first line imports a bunch of different neuron layers we can use
 # Input: self-explanatory; stores input data that is fed-forward to future layers
@@ -44,7 +45,8 @@ for encoding/decoding.
 # Reshape: Layer that reshapes inputs to desired shape
 # ZeroPadding2D: pads input with zeros (so its dimensions are divisible by 2^k for reduction by max pooling)
 # Cropping2D: undos this ^ by removing padding
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D
+# TimeDistributed: applies
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D, TimeDistributed
 from keras.models import Model, Sequential, load_model
 from keras import backend as K
 import os
@@ -61,9 +63,13 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', default=50, type=int)
 parser.add_argument('--batch_size', default=128, type=int)
-parser.add_argument('--name', default='conv_autoencoder_MSE')
-parser.add_argument('--load') # specify a file to load
+parser.add_argument('--name', default='rnn_predictior__MSE')
+parser.add_argument('--load') # specify a full pre-trained RNN model to load
+parser.add_argument('--autoencoder') # specify the filename for the weights trained to autoencode
 args = parser.parse_args()
+
+if args.load is None and args.autoencoder is None:
+    raise ValueError('Either a autoencoder model file must be specified (via --autoencoder filename) or a pre-trained model (via --load)')
 
 epochs = args.epochs
 batch_size = args.batch_size
@@ -151,37 +157,33 @@ if args.load is not None:
     # do stuff
     model = load_model(args.load)
 else:
-    image_shape.append(1)
+    autoencoder = load_model(args.autoencoder)
 
-    model = Sequential()
+    #TODO: set autoencoder weights to be untrainable (trainable = False)
 
-    # padding prevents the change of shape due to down/upsampling
-    model.add(ZeroPadding2D(((2,1),(2,1)), input_shape = image_shape))  # (61,61, 1) --> (64,64, 1)
+    # Since the autoencoder is symmetric (the encoder section has exactly the same number of layers
+    # as the decoder region) we can just place the RNN in the middle:
+    num_layers = len(autoencoder.layers)
+    x = autoencoder.layers[0].output
 
-    model.add(Conv2D(16, (3,3), activation='relu', padding='same'))         # (64, 64, 1) --> (64, 64, 16) 
-    model.add(MaxPooling2D((2,2), padding='same'))                          # (64, 64, 16) --> (32, 32, 16)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (32,32, 16) --> (32,32, 8)
-    model.add(MaxPooling2D((2,2), padding = 'same'))                        # (32, 32, 8) --> (16,16, 8)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (16,16,8) --> (16,16,4)
-    model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (16,16,8) --> (16,16,4)
-    model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
-    model.add(Conv2D(1, (3,3), activation = 'relu', padding = 'same'))      # (4,4,4) --> (4,4,1)
+    for i in range(1, num_layers // 2):
+        x = autoencoder.layers[i](x)
 
+    #TODO:  add the RNN here
+    out_shape = autoencoder.layers[num_layers//2 - 1].output_shape
+    x = Reshape(out_shape[1:3])(x)
+    x = SimpleRNN(out_shape[1] * out_shape[2], name='rnn')(x)
+    x = Reshape(out_shape[1:4])(x)
 
-    # decode the lower dimensional representation back into an image
-    model.add(Conv2D(4,(3,3), activation = 'relu', padding = 'same')) # (4,4,1) --> (4,4,4)
-    model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
-    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (4,4,1) --> (4,4,4)
-    model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
-    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (16,16,4) --> (16,16,8)
-    model.add(UpSampling2D((2,2)))                                    # (16,16,8) -> (32,32,8)
-    model.add(Conv2D(16, (3,3), activation = 'relu', padding='same'))# (32,32,8) -> (32,32,16)
-    model.add(UpSampling2D((2,2)))                                    # (32,32,16) -> (64,64,16)
-    # want to use sigmoid as our final activation function to make the output more
-    model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same')) # (64,64,16) -> (64,64, 1)
+    for i in range(num_layers//2, num_layers):
+        x = autoencoder.layers[i](x)
 
-    model.add(Cropping2D(((2,1),(2,1)))) # (64,64,1) -> (61,61, 1)
+    # Build the RNN model
+    model = Model(input=autoencoder.input, output=x)
+
+    for layer in model.layers:
+        if not layer.name == 'rnn':
+            layer.trainable = False
 
     model.compile(optimizer = 'adam', loss='binary_crossentropy')
 
