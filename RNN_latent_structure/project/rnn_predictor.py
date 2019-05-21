@@ -46,7 +46,7 @@ for encoding/decoding.
 # ZeroPadding2D: pads input with zeros (so its dimensions are divisible by 2^k for reduction by max pooling)
 # Cropping2D: undos this ^ by removing padding
 # TimeDistributed: applies
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D, TimeDistributed
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D, TimeDistributed, Flatten
 from keras.models import Model, Sequential, load_model
 from keras import backend as K
 import os
@@ -61,11 +61,12 @@ import time
 # note now we are not going to vectorize our data because we care about the local structure
 # instead, input will be fed in as matrices (i.e. frame by frame)
 parser = argparse.ArgumentParser()
-parser.add_argument('--epochs', default=50, type=int)
-parser.add_argument('--batch_size', default=128, type=int)
-parser.add_argument('--name', default='rnn_predictior__MSE')
-parser.add_argument('--load') # specify a full pre-trained RNN model to load
-parser.add_argument('--autoencoder') # specify the filename for the weights trained to autoencode
+parser.add_argument('--epochs', default=50, type=int, help='number of epochs in neural net training')
+parser.add_argument('--batch_size', default=128, type=int, help='batch size for training')
+parser.add_argument('--name', default='rnn_predictior__MSE', help='file name to save to RNN Keras model under in the ./models folder')
+parser.add_argument('--load', help='file name for a previously trained RNN that you wish to train further.') # specify a full pre-trained RNN model to load
+parser.add_argument('--autoencoder', help='filename that stores the Keras model with the pre-trained convolutional autoencoder (see convolution_autoencoder.py)') # specify the filename for the weights trained to autoencode
+parser.add_argument('--dt', default=1, type=int, help='Number of frames ahead in movie to make prediction')
 args = parser.parse_args()
 
 if args.load is None and args.autoencoder is None:
@@ -75,6 +76,7 @@ epochs = args.epochs
 batch_size = args.batch_size
 model_name = args.name
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
+dt = args.dt # number of frames ahead to make a prediction
 
 # Save the Keras model
 model_filename = Path(model_name + ".h5")
@@ -85,6 +87,13 @@ if model_filename.exists():
         sys.exit()
 
 # Load movie clips ===============================================================================`
+
+# NOTE: Unlike in the convolutional_autoencoder case where we just stacked all the frames to form our 
+# inputs, we want to retain this data as sequences so we can do sequence prediction with our RNN (i.e. predict
+# the future frames given a set of current frames). Thus,
+# our inputs will be stored as full films and the outputs will be staggered in time
+# Thus, inputs to neural net will be of the form (# films, # frames/film, frame height, frame width)
+# with each single input as (1, # frames, frame height, frame width)
 
 num_train_movies = 0
 num_test_movies = 0
@@ -105,12 +114,21 @@ for i, f in enumerate(os.scandir('./movie_files')):
 
 image_shape = [frameHeight, frameWidth]
     
-x_train = np.empty((frameCount * num_train_movies, frameHeight, frameWidth, 1))
-x_test = np.empty((frameCount * num_test_movies, frameHeight, frameWidth, 1))
+# you start with frameCount frames. Since the input and output have to be staggered by dt, this means
+# that the input and output can have at most (frameCount - dt) frames as dt of their frames do not overlap.
+num_frames = frameCount - dt
+
+x_train = np.empty((num_train_movies, num_frames, frameHeight, frameWidth, 1))
+y_train = np.empty((num_train_movies, num_frames, frameHeight, frameWidth, 1))
+x_test = np.empty((num_test_movies, num_frames, frameHeight, frameWidth, 1))
+y_test = np.empty((num_test_movies, num_frames, frameHeight, frameWidth, 1))
 
 train_ind = 0
+train_movie_num = 0
 test_ind = 0
+test_movie_num = 0
 for f in os.scandir('./movie_files'):
+
     cap = cv2.VideoCapture(f.path)
     while True: 
         # ret is a boolean that captures whether or not the frame was read properly (i.e.
@@ -121,14 +139,34 @@ for f in os.scandir('./movie_files'):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         if f.name.startswith('train'):
-            x_train[train_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            if train_ind < num_frames:  
+                x_train[train_movie_num, train_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            if train_ind >= dt:
+                y_train[train_movie_num, train_ind - dt, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+
             train_ind += 1
+
         elif f.name.startswith('test'):
-            x_test[test_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            if test_ind < num_frames:  
+                x_test[test_movie_num, test_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            if test_ind >= dt:
+                y_test[test_movie_num, test_ind - dt, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
             test_ind += 1
+
+    if f.name.startswith('train'): 
+        train_movie_num += 1
+        train_ind = 0
+    elif f.name.startswith('test'): 
+        test_movie_num += 1
+        test_ind =  0
 
 #plt.imshow(x_test[0].reshape((frameHeight,frameWidth)))
 #plt.show()
+
+#print('='*40)
+#print(train_movie_num)
+#print(test_movie_num)
+#print('='*40)
 
 
 
@@ -164,19 +202,22 @@ else:
     # Since the autoencoder is symmetric (the encoder section has exactly the same number of layers
     # as the decoder region) we can just place the RNN in the middle:
     num_layers = len(autoencoder.layers)
-    x = autoencoder.layers[0].output
+    '''
+    x = TimeDistributed(autoencoder.layers[0].output)#.output
 
     for i in range(1, num_layers // 2):
-        x = autoencoder.layers[i](x)
+        x = TimeDistributed(autoencoder.layers[i])(x)
 
     #TODO:  add the RNN here
     out_shape = autoencoder.layers[num_layers//2 - 1].output_shape
     x = Reshape(out_shape[1:3])(x)
-    x = SimpleRNN(out_shape[1] * out_shape[2], name='rnn')(x)
-    x = Reshape(out_shape[1:4])(x)
+    x = SimpleRNN(out_shape[1] * out_shape[2], 
+                  return_sequences = True,
+                  name='rnn')(x)
+    x = TimeDistributed(Reshape(out_shape[1:4]))(x)
 
     for i in range(num_layers//2, num_layers):
-        x = autoencoder.layers[i](x)
+        x = TimeDistributed(autoencoder.layers[i])(x)
 
     # Build the RNN model
     model = Model(input=autoencoder.input, output=x)
@@ -185,46 +226,77 @@ else:
         if not layer.name == 'rnn':
             layer.trainable = False
 
-    model.compile(optimizer = 'adam', loss='binary_crossentropy')
+    '''
+    model = Sequential()
+    for i in range(num_layers // 2):
+        model.add(TimeDistributed(autoencoder.layers[i]))
 
-    #for layer in model.layers:
-    #    print(layer.output_shape)
+    out_shape = autoencoder.layers[num_layers//2 - 1].output_shape
+    model.add(TimeDistributed(Flatten()))
+    model.add(SimpleRNN(out_shape[1] * out_shape[2], 
+                  return_sequences = True,
+                  name='rnn'))
+    model.add(TimeDistributed(Reshape(out_shape[1:4])))
+
+    for i in range(num_layers//2, num_layers):
+        model.add(TimeDistributed(autoencoder.layers[i]))
+
+    # set non-reccurent layers to untrainable
+    for layer in model.layers:
+        if not layer.name == 'rnn':
+            layer.trainable = False
+
+    model.compile(optimizer = 'adam', loss='binary_crossentropy')
 
 # ================================================================================================
 # fit model (train network)!
-model.fit(x_train, x_train,
+model.fit(x_train, y_train,
           epochs = epochs, 
           batch_size = batch_size, 
           shuffle = True,
-          validation_data = (x_test, x_test))
+          validation_split = 0.1)
 
 # NOTE: Saves the model to the given model name in the folder ./models
 model.save(str(model_filename))
+print(model.summary())
 
 # make predictions!
-predicted_images = model.predict(x_test)
-true_images = x_test
+predicted_images = model.predict(x_test)[0] # the [0] just takes predictions for first video
+true_images = y_test[0, :, :, :, :]
+initial_images = x_test[0, :, :, :, :]
 
 # plot stuff ====================================================================================
 
-n = num_results_shown # number of digits to display
+n = num_results_shown # number of frames to display
 
 plt.figure(figsize=(20,4))
 for i in range(n):
+    # display original at time t (in top row)
+    ax = plt.subplot(3, n, i+1) # which subplot to work with; 2 rows, n columns, slot i+1
+    plt.imshow(initial_images[i].reshape(image_shape[0], image_shape[1]))
+    plt.gray()
+    ax.get_xaxis().set_visible = False
+    ax.get_yaxis().set_visible = False
+    if i == 0:
+        plt.ylabel('Original (time t)')
 
-    # display original (in top row)
-    ax = plt.subplot(2, n, i+1) # which subplot to work with; 2 rows, n columns, slot i+1
+    # display original at time t+dt (in middle row)
+    ax = plt.subplot(3, n, i+ 1 + n) # which subplot to work with; 2 rows, n columns, slot i+1
     plt.imshow(true_images[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
+    if i == 0:
+        plt.ylabel('Original (time t+1)')
 
-    # display predicted (in bottom row)
-    ax = plt.subplot(2, n, i+ 1 + n) # which subplot to work with; 2 rows, n columns, slot i+1
+    # display predicted at time t+dt (in bottom row)
+    ax = plt.subplot(3, n, i+ 1 + 2*n) # which subplot to work with; 2 rows, n columns, slot i+1
     plt.imshow(predicted_images[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
+    if i == 0:
+        plt.ylabel('Predicted (time t + 1)')
 
 plt.show()
 
