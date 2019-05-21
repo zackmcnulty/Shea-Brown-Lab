@@ -160,16 +160,6 @@ for f in os.scandir('./movie_files'):
         test_movie_num += 1
         test_ind =  0
 
-#plt.imshow(x_test[0].reshape((frameHeight,frameWidth)))
-#plt.show()
-
-#print('='*40)
-#print(train_movie_num)
-#print(test_movie_num)
-#print('='*40)
-
-
-
 
 # convert the image into a lower dimensional representation
 
@@ -201,32 +191,11 @@ else:
 
     # Since the autoencoder is symmetric (the encoder section has exactly the same number of layers
     # as the decoder region) we can just place the RNN in the middle:
+    # We also have to convert all the layers to TimeDistributed so they can handle sequence prediction, but this
+    # does not effect their weights. All the non-RNN layers will just apply their weights to each element in the
+    # sequence individually, but the full sequence will be fed into (and come out of) the RNN
     num_layers = len(autoencoder.layers)
-    '''
-    x = TimeDistributed(autoencoder.layers[0].output)#.output
 
-    for i in range(1, num_layers // 2):
-        x = TimeDistributed(autoencoder.layers[i])(x)
-
-    #TODO:  add the RNN here
-    out_shape = autoencoder.layers[num_layers//2 - 1].output_shape
-    x = Reshape(out_shape[1:3])(x)
-    x = SimpleRNN(out_shape[1] * out_shape[2], 
-                  return_sequences = True,
-                  name='rnn')(x)
-    x = TimeDistributed(Reshape(out_shape[1:4]))(x)
-
-    for i in range(num_layers//2, num_layers):
-        x = TimeDistributed(autoencoder.layers[i])(x)
-
-    # Build the RNN model
-    model = Model(input=autoencoder.input, output=x)
-
-    for layer in model.layers:
-        if not layer.name == 'rnn':
-            layer.trainable = False
-
-    '''
     model = Sequential()
     for i in range(num_layers // 2):
         model.add(TimeDistributed(autoencoder.layers[i]))
@@ -241,7 +210,8 @@ else:
     for i in range(num_layers//2, num_layers):
         model.add(TimeDistributed(autoencoder.layers[i]))
 
-    # set non-reccurent layers to untrainable
+    # set non-reccurent layers to untrainable; we already trained these to be autoencoders, so the RNN
+    # just has to learn how to move the object in the low dimensional space
     for layer in model.layers:
         if not layer.name == 'rnn':
             layer.trainable = False
@@ -278,7 +248,7 @@ for i in range(n):
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
     if i == 0:
-        plt.ylabel('Original (time t)')
+        plt.ylabel('Original (t)')
 
     # display original at time t+dt (in middle row)
     ax = plt.subplot(3, n, i+ 1 + n) # which subplot to work with; 2 rows, n columns, slot i+1
@@ -287,7 +257,7 @@ for i in range(n):
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
     if i == 0:
-        plt.ylabel('Original (time t+1)')
+        plt.ylabel('Original (t+dt)')
 
     # display predicted at time t+dt (in bottom row)
     ax = plt.subplot(3, n, i+ 1 + 2*n) # which subplot to work with; 2 rows, n columns, slot i+1
@@ -296,7 +266,7 @@ for i in range(n):
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
     if i == 0:
-        plt.ylabel('Predicted (time t + 1)')
+        plt.ylabel('Predicted (t+dt)')
 
 plt.show()
 
