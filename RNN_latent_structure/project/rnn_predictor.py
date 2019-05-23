@@ -77,6 +77,7 @@ batch_size = args.batch_size
 model_name = args.name
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
 dt = args.dt # number of frames ahead to make a prediction
+rnn_size = 100 # must be a square number so it can be reshaped into 2D format for Conv2D
 
 # Save the Keras model
 model_filename = Path(model_name + ".h5")

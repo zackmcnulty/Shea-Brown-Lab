@@ -98,3 +98,6 @@ movie_files/train0062.mp4 filter=lfs diff=lfs merge=lfs -text
 movie_files/test0001.mp4 filter=lfs diff=lfs merge=lfs -text
 movie_files/test0008.mp4 filter=lfs diff=lfs merge=lfs -text
 movie_files/train0045.mp4 filter=lfs diff=lfs merge=lfs -text
+models/rnn_predictior__MSE.h5 filter=lfs diff=lfs merge=lfs -text
+models/conv_autoencoder_BCE_GOOD.h5 filter=lfs diff=lfs merge=lfs -text
+models/conv_autoencoder_MSE.h5 filter=lfs diff=lfs merge=lfs -text

@@ -1,15 +1,7 @@
 '''
-The task is to build an autoencoder for the MNIST database. This will learn
-to form a compressed representation of the handwritten digit (encoding)
-and then decode it back into the original image.
-
-Here, I follow the tutorial found at:
-
-    https://blog.keras.io/building-autoencoders-in-keras.html
-
 In this rendition, we will be using convolutional neural networks to downsize the images.
 Since these types of neural nets are better at storing the local structure of the
-data they are compression, they should work better than a standard feedforward layer
+data they are compressing, they should work better than a standard feedforward layer
 for encoding/decoding. 
 
 '''
