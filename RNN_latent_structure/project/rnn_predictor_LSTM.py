@@ -62,7 +62,7 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', default=50, type=int, help='number of epochs in neural net training')
 parser.add_argument('--batch_size', default=5, type=int, help='batch size for training')
-parser.add_argument('--name', default='rnn_predictior__MSE', help='file name to save to RNN Keras model under in the ./models folder')
+parser.add_argument('--name', default='rnn_predictior_LSTM_BCE', help='file name to save to RNN Keras model under in the ./models folder')
 parser.add_argument('--load', help='file name for a previously trained RNN that you wish to train further.') # specify a full pre-trained RNN model to load
 parser.add_argument('--autoencoder', help='filename that stores the Keras model with the pre-trained convolutional autoencoder (see convolution_autoencoder.py)') # specify the filename for the weights trained to autoencode
 parser.add_argument('--dt', default=1, type=int, help='Number of frames ahead in movie to make prediction')
@@ -77,8 +77,6 @@ model_name = args.name
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
 dt = args.dt # number of frames ahead to make a prediction
 
-# For simple RNN
-rnn_size = 256
 
 # Check if a model already exists with the given filename
 model_filename = Path(model_name + ".h5")
@@ -206,17 +204,19 @@ else:
 
     out_shape = autoencoder.layers[num_layers//2 - 1].output_shape
 
+    # Convolutional LSTM 
 
-    #SimpleRNN
-    model.add(TimeDistributed(Flatten()))
-    model.add(SimpleRNN(rnn_size, 
-                  return_sequences = True,
-                  activation = 'tanh',
-                  name='rnn'))
-    # NOTE: since the RNN changes size of output of the final Conv2D layer in encoding section, we somehow have
-    #       to map the dimension back down. This is what the Dense layer below does
-    model.add(TimeDistributed(Dense(out_shape[1] * out_shape[2], activation = 'relu', name = 'ff')))
-    model.add(TimeDistributed(Reshape((out_shape[1], out_shape[2], 1))))
+    # NOTE: keep in mind that the output of the LSTM is fed back into the LSTM as an input, so the number
+    #       of filters must match the number of output channels in the previous layer (number of filters in
+    #       final convolutional filter?).
+    num_filters = out_shape[-1]
+    kernel_shape = (2,2)
+    model.add(ConvLSTM2D(filters=num_filters, 
+                        kernel_size=kernel_shape,
+                        padding='same',
+                        return_sequences = True,
+                        name='rnn'))
+
 
     for i in range(num_layers//2, num_layers):
         model.add(TimeDistributed(autoencoder.layers[i]))

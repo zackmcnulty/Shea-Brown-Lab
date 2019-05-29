@@ -1,18 +1,11 @@
 '''
-The task is to build an autoencoder for the MNIST database. This will learn
-to form a compressed representation of the handwritten digit (encoding)
-and then decode it back into the original image.
-
-Here, I follow the tutorial found at:
-
-    https://blog.keras.io/building-autoencoders-in-keras.html
-
 In this rendition, we will be using convolutional neural networks to downsize the images.
 Since these types of neural nets are better at storing the local structure of the
-data they are compression, they should work better than a standard feedforward layer
+data they are compressing, they should work better than a standard feedforward layer
 for encoding/decoding. 
 
 '''
+
 # This first line imports a bunch of different neuron layers we can use
 # Input: self-explanatory; stores input data that is fed-forward to future layers
 
@@ -43,9 +36,7 @@ for encoding/decoding.
 # Reshape: Layer that reshapes inputs to desired shape
 # ZeroPadding2D: pads input with zeros (so its dimensions are divisible by 2^k for reduction by max pooling)
 # Cropping2D: undos this ^ by removing padding
-# TimeDistributed: applies this layer to every element in the provided sequence.
-# ConvLSTM2D: reccurrent neural network (LSTM) that is applied convolutionally
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D, TimeDistributed, Flatten, ConvLSTM2D
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D
 from keras.models import Model, Sequential, load_model
 from keras import backend as K
 import os
@@ -60,27 +51,18 @@ import time
 # note now we are not going to vectorize our data because we care about the local structure
 # instead, input will be fed in as matrices (i.e. frame by frame)
 parser = argparse.ArgumentParser()
-parser.add_argument('--epochs', default=50, type=int, help='number of epochs in neural net training')
-parser.add_argument('--batch_size', default=5, type=int, help='batch size for training')
-parser.add_argument('--name', default='rnn_predictior__MSE', help='file name to save to RNN Keras model under in the ./models folder')
-parser.add_argument('--load', help='file name for a previously trained RNN that you wish to train further.') # specify a full pre-trained RNN model to load
-parser.add_argument('--autoencoder', help='filename that stores the Keras model with the pre-trained convolutional autoencoder (see convolution_autoencoder.py)') # specify the filename for the weights trained to autoencode
-parser.add_argument('--dt', default=1, type=int, help='Number of frames ahead in movie to make prediction')
+parser.add_argument('--epochs', default=50, type=int)
+parser.add_argument('--batch_size', default=128, type=int)
+parser.add_argument('--name', default='conv_autoencoder_LSTM_BCE')
+parser.add_argument('--load') # specify a file to load
 args = parser.parse_args()
-
-if args.load is None and args.autoencoder is None:
-    raise ValueError('Either a autoencoder model file must be specified (via --autoencoder filename) or a pre-trained model (via --load)')
 
 epochs = args.epochs
 batch_size = args.batch_size
 model_name = args.name
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
-dt = args.dt # number of frames ahead to make a prediction
 
-# For simple RNN
-rnn_size = 256
-
-# Check if a model already exists with the given filename
+# Save the Keras model
 model_filename = Path(model_name + ".h5")
 model_filename = 'models' / model_filename
 if model_filename.exists():
@@ -89,13 +71,6 @@ if model_filename.exists():
         sys.exit()
 
 # Load movie clips ===============================================================================`
-
-# NOTE: Unlike in the convolutional_autoencoder case where we just stacked all the frames to form our 
-# inputs, we want to retain this data as sequences so we can do sequence prediction with our RNN (i.e. predict
-# the future frames given a set of current frames). Thus,
-# our inputs will be stored as full films and the outputs will be staggered in time
-# Thus, inputs to neural net will be of the form (# films, # frames/film, frame height, frame width)
-# with each single input as (1, # frames, frame height, frame width)
 
 num_train_movies = 0
 num_test_movies = 0
@@ -116,21 +91,12 @@ for i, f in enumerate(os.scandir('./movie_files')):
 
 image_shape = [frameHeight, frameWidth]
     
-# you start with frameCount frames. Since the input and output have to be staggered by dt, this means
-# that the input and output can have at most (frameCount - dt) frames as dt of their frames do not overlap.
-num_frames = frameCount - dt
-
-x_train = np.empty((num_train_movies, num_frames, frameHeight, frameWidth, 1))
-y_train = np.empty((num_train_movies, num_frames, frameHeight, frameWidth, 1))
-x_test = np.empty((num_test_movies, num_frames, frameHeight, frameWidth, 1))
-y_test = np.empty((num_test_movies, num_frames, frameHeight, frameWidth, 1))
+x_train = np.empty((frameCount * num_train_movies, frameHeight, frameWidth, 1))
+x_test = np.empty((frameCount * num_test_movies, frameHeight, frameWidth, 1))
 
 train_ind = 0
-train_movie_num = 0
 test_ind = 0
-test_movie_num = 0
 for f in os.scandir('./movie_files'):
-
     cap = cv2.VideoCapture(f.path)
     while True: 
         # ret is a boolean that captures whether or not the frame was read properly (i.e.
@@ -141,30 +107,17 @@ for f in os.scandir('./movie_files'):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         if f.name.startswith('train'):
-            if train_ind < num_frames:  
-                x_train[train_movie_num, train_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
-            if train_ind >= dt:
-                y_train[train_movie_num, train_ind - dt, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
-
+            x_train[train_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
             train_ind += 1
-
         elif f.name.startswith('test'):
-            if test_ind < num_frames:  
-                x_test[test_movie_num, test_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
-            if test_ind >= dt:
-                y_test[test_movie_num, test_ind - dt, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            x_test[test_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
             test_ind += 1
 
-    if f.name.startswith('train'): 
-        train_movie_num += 1
-        train_ind = 0
-    elif f.name.startswith('test'): 
-        test_movie_num += 1
-        test_ind =  0
+#plt.imshow(x_test[0].reshape((frameHeight,frameWidth)))
+#plt.show()
 
-# TODO: Delete this
-#x_train = x_train[:, :, :, :, 0]
-#x_test = x_test[:, :, :, :, 0]
+
+
 
 # convert the image into a lower dimensional representation
 
@@ -190,94 +143,78 @@ if args.load is not None:
     # do stuff
     model = load_model(args.load)
 else:
-    autoencoder = load_model(args.autoencoder)
-
-    # Since the autoencoder is symmetric (the encoder section has exactly the same number of layers
-    # as the decoder region) we can just place the RNN in the middle:
-    # We also have to convert all the layers to TimeDistributed so they can handle sequence prediction, but this
-    # does not effect their weights. All the non-RNN layers will just apply their weights to each element in the
-    # sequence individually, but the full sequence will be fed into (and come out of) the RNN
-    num_layers = len(autoencoder.layers)
+    image_shape.append(1)
 
     model = Sequential()
-    for i in range(num_layers // 2):
-        model.add(TimeDistributed(autoencoder.layers[i]))
-    
 
-    out_shape = autoencoder.layers[num_layers//2 - 1].output_shape
+    # padding prevents the change of shape due to down/upsampling
+    model.add(ZeroPadding2D(((2,1),(2,1)), input_shape = image_shape))  # (61,61, 1) --> (64,64, 1)
+
+    model.add(Conv2D(16, (3,3), activation='relu', padding='same'))         # (64, 64, 1) --> (64, 64, 16) 
+    model.add(MaxPooling2D((2,2), padding='same'))                          # (64, 64, 16) --> (32, 32, 16)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (32,32, 16) --> (32,32, 8)
+    model.add(MaxPooling2D((2,2), padding = 'same'))                        # (32, 32, 8) --> (16,16, 8)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (16,16,8) --> (16,16,4)
+    model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (16,16,8) --> (16,16,4)
+    model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
+    model.add(Conv2D(4, (3,3), activation = 'relu', padding = 'same'))      # (4,4,4) --> (4,4,1)
 
 
-    #SimpleRNN
-    model.add(TimeDistributed(Flatten()))
-    model.add(SimpleRNN(rnn_size, 
-                  return_sequences = True,
-                  activation = 'tanh',
-                  name='rnn'))
-    # NOTE: since the RNN changes size of output of the final Conv2D layer in encoding section, we somehow have
-    #       to map the dimension back down. This is what the Dense layer below does
-    model.add(TimeDistributed(Dense(out_shape[1] * out_shape[2], activation = 'relu', name = 'ff')))
-    model.add(TimeDistributed(Reshape((out_shape[1], out_shape[2], 1))))
+    # decode the lower dimensional representation back into an image
+    model.add(Conv2D(4,(3,3), activation = 'relu', padding = 'same')) # (4,4,1) --> (4,4,4)
+    model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
+    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (4,4,1) --> (4,4,4)
+    model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
+    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (16,16,4) --> (16,16,8)
+    model.add(UpSampling2D((2,2)))                                    # (16,16,8) -> (32,32,8)
+    model.add(Conv2D(16, (3,3), activation = 'relu', padding='same'))# (32,32,8) -> (32,32,16)
+    model.add(UpSampling2D((2,2)))                                    # (32,32,16) -> (64,64,16)
+    # want to use sigmoid as our final activation function to make the output more
+    model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same')) # (64,64,16) -> (64,64, 1)
 
-    for i in range(num_layers//2, num_layers):
-        model.add(TimeDistributed(autoencoder.layers[i]))
-
-    # set non-reccurent layers to untrainable; we already trained these to be autoencoders, so the RNN
-    # just has to learn how to move the object in the low dimensional space
-    for layer in model.layers:
-        if not (layer.name == 'rnn' or layer.name == 'ff'):
-            layer.trainable = False
+    model.add(Cropping2D(((2,1),(2,1)))) # (64,64,1) -> (61,61, 1)
 
     model.compile(optimizer = 'adam', loss='binary_crossentropy')
 
+    #for layer in model.layers:
+    #    print(layer.output_shape)
+
 # ================================================================================================
 # fit model (train network)!
-model.fit(x_train, y_train,
+model.fit(x_train, x_train,
           epochs = epochs, 
           batch_size = batch_size, 
           shuffle = True,
-          validation_split = 0.1)
+          validation_data = (x_test, x_test))
 
 # NOTE: Saves the model to the given model name in the folder ./models
 model.save(str(model_filename))
-print(model.summary())
 
 # make predictions!
-predicted_images = model.predict(x_test)[0] # the [0] just takes predictions for first video
-true_images = y_test[0, :, :, :, :]
-initial_images = x_test[0, :, :, :, :]
+predicted_images = model.predict(x_test)
+true_images = x_test
 
 # plot stuff ====================================================================================
 
-n = num_results_shown # number of frames to display
+n = num_results_shown # number of digits to display
 
 plt.figure(figsize=(20,4))
 for i in range(n):
-    # display original at time t (in top row)
-    ax = plt.subplot(3, n, i+1) # which subplot to work with; 2 rows, n columns, slot i+1
-    plt.imshow(initial_images[i].reshape(image_shape[0], image_shape[1]))
-    plt.gray()
-    ax.get_xaxis().set_visible = False
-    ax.get_yaxis().set_visible = False
-    if i == 0:
-        plt.ylabel('Original (t)')
 
-    # display original at time t+dt (in middle row)
-    ax = plt.subplot(3, n, i+ 1 + n) # which subplot to work with; 2 rows, n columns, slot i+1
+    # display original (in top row)
+    ax = plt.subplot(2, n, i+1) # which subplot to work with; 2 rows, n columns, slot i+1
     plt.imshow(true_images[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
-    if i == 0:
-        plt.ylabel('Original (t+dt)')
 
-    # display predicted at time t+dt (in bottom row)
-    ax = plt.subplot(3, n, i+ 1 + 2*n) # which subplot to work with; 2 rows, n columns, slot i+1
+    # display predicted (in bottom row)
+    ax = plt.subplot(2, n, i+ 1 + n) # which subplot to work with; 2 rows, n columns, slot i+1
     plt.imshow(predicted_images[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
-    if i == 0:
-        plt.ylabel('Predicted (t+dt)')
 
 plt.show()
 
