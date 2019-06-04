@@ -38,6 +38,7 @@ for encoding/decoding.
 # Cropping2D: undos this ^ by removing padding
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D
 from keras.models import Model, Sequential, load_model
+from keras import regularizers
 from keras import backend as K
 import os
 import sys
@@ -53,18 +54,24 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', default=50, type=int)
 parser.add_argument('--batch_size', default=128, type=int)
-parser.add_argument('--name', default='conv_autoencoder_MSE')
+parser.add_argument('--name', default='conv_autoencoder_LSTM_BCE')
 parser.add_argument('--load') # specify a file to load
+parser.add_argument('--l1', default=0, type=float, help='l1 penalization on kernels of convolutional layers') # specify a file to load
 args = parser.parse_args()
 
 epochs = args.epochs
 batch_size = args.batch_size
 model_name = args.name
+l1 = args.l1
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
 
 # Save the Keras model
-model_filename = Path(model_name + ".h5")
-model_filename = 'models' / model_filename
+if args.load is not None and args.name is None:
+    model_filename = Path(args.load)
+else:
+    model_filename = Path(model_name + "_l1_" + str(l1) + ".h5")
+    model_filename = 'models' / model_filename 
+
 if model_filename.exists():
     answer = input('File name ' + model_filename.name + ' already exists. Overwrite [y/n]? ')
     if not 'y' in answer.lower():
@@ -150,28 +157,28 @@ else:
     # padding prevents the change of shape due to down/upsampling
     model.add(ZeroPadding2D(((2,1),(2,1)), input_shape = image_shape))  # (61,61, 1) --> (64,64, 1)
 
-    model.add(Conv2D(16, (3,3), activation='relu', padding='same'))         # (64, 64, 1) --> (64, 64, 16) 
+    model.add(Conv2D(16, (3,3), activation='relu', padding='same', kernel_regularizer=regularizers.l1(l1)))         # (64, 64, 1) --> (64, 64, 16) 
     model.add(MaxPooling2D((2,2), padding='same'))                          # (64, 64, 16) --> (32, 32, 16)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (32,32, 16) --> (32,32, 8)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1)))      # (32,32, 16) --> (32,32, 8)
     model.add(MaxPooling2D((2,2), padding = 'same'))                        # (32, 32, 8) --> (16,16, 8)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (16,16,8) --> (16,16,4)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1)))      # (16,16,8) --> (16,16,4)
     model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same'))      # (16,16,8) --> (16,16,4)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1)))      # (16,16,8) --> (16,16,4)
     model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
-    model.add(Conv2D(1, (3,3), activation = 'relu', padding = 'same'))      # (4,4,4) --> (4,4,1)
+    model.add(Conv2D(4, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1)))      # (4,4,4) --> (4,4,1)
 
 
     # decode the lower dimensional representation back into an image
-    model.add(Conv2D(4,(3,3), activation = 'relu', padding = 'same')) # (4,4,1) --> (4,4,4)
+    model.add(Conv2D(4,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1))) # (4,4,1) --> (4,4,4)
     model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
-    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (4,4,1) --> (4,4,4)
+    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1))) # (4,4,1) --> (4,4,4)
     model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
-    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same')) # (16,16,4) --> (16,16,8)
+    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1))) # (16,16,4) --> (16,16,8)
     model.add(UpSampling2D((2,2)))                                    # (16,16,8) -> (32,32,8)
-    model.add(Conv2D(16, (3,3), activation = 'relu', padding='same'))# (32,32,8) -> (32,32,16)
+    model.add(Conv2D(16, (3,3), activation = 'relu', padding='same', kernel_regularizer=regularizers.l1(l1)))# (32,32,8) -> (32,32,16)
     model.add(UpSampling2D((2,2)))                                    # (32,32,16) -> (64,64,16)
     # want to use sigmoid as our final activation function to make the output more
-    model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same')) # (64,64,16) -> (64,64, 1)
+    model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same', kernel_regularizer=regularizers.l1(l1))) # (64,64,16) -> (64,64, 1)
 
     model.add(Cropping2D(((2,1),(2,1)))) # (64,64,1) -> (61,61, 1)
 
@@ -190,6 +197,7 @@ model.fit(x_train, x_train,
 
 # NOTE: Saves the model to the given model name in the folder ./models
 model.save(str(model_filename))
+model.summary()
 
 # make predictions!
 predicted_images = model.predict(x_test)
