@@ -28,6 +28,7 @@ from PIL import Image as NewImage
 import os
 import sys
 import argparse
+from pathlib import Path
 
 
 
@@ -35,9 +36,11 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-random', action='store_true')
-parser.add_argument('-name', default='model')
-parser.add_argument('-train', action='store_true')
-parser.add_argument('-p_test', type=float, default=0.2) 
+parser.add_argument('-name', required=True)
+parser.add_argument('--folder', default='./movie_files')
+parser.add_argument('-train', action='store_true', help='add to training dataset')
+parser.add_argument('-p_test', type=float, help='percent of [0, 2pi] to allocate to testing dataset') 
+parser.add_argument('--theta', type=float, help='angle of oscillation for movie')
 args = parser.parse_args()
 
 # each object will be specified by (motion = (dynamics, initial_condition), shape)
@@ -45,25 +48,14 @@ args = parser.parse_args()
 # NOTE: The depth of objects in the image is specified by the order they appear in "objects" below.
 #       Shapes earlier in "objects" appear deeper in the image
 
-if not args.random: # specify the objects in this program 
-    objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=np.pi/4 ), )  
-
-    # NOTE: set all shapes to start at centered (0,0)
-    shapes =  (Rectangle(Point(-5,-5), Point(5,5)), )
-
-    # NOTE: Colors can be strings ('black', 'blue', 'green', 'black', 'yellow') or RBG in the form of a tuple (r, g, b)
-
-    # Randomly choose colors for the objects.
-    fill_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
-    outline_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
 
 
-
-else: # ... for generating large batches of movies; uses .sh script
+# Randomly generate training/testing data
+if args.random: # ... for generating large batches of movies; uses .sh script
     #NOTE: See the file generate_data.sh for more information about
     # what I used this 'else' section for
 
-
+    args.p_test = args.p_test / 2
     low_train = np.pi * args.p_test
     high_train = np.pi - low_train
     low_test = -1 * low_train
@@ -78,6 +70,33 @@ else: # ... for generating large batches of movies; uses .sh script
     shapes =  (Rectangle(Point(-3,-3), Point(3,3)), )
     fill_colors = ['black']
     outline_colors = ['black']
+
+
+
+# generate movies with angles uniformly distributed along some range.
+elif args.theta is not None:
+    
+    # convert angle given in degrees to radians
+    args.theta = np.pi / 180 * args.theta
+
+    objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=args.theta), )  
+    shapes =  (Rectangle(Point(-3,-3), Point(3,3)), )
+    fill_colors = ['black']
+    outline_colors = ['black']
+
+
+else: # specify the objects in this program 
+    objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=np.pi/4 ), )  
+
+    # NOTE: set all shapes to start at centered (0,0)
+    shapes =  (Rectangle(Point(-5,-5), Point(5,5)), )
+
+    # NOTE: Colors can be strings ('black', 'blue', 'green', 'black', 'yellow') or RBG in the form of a tuple (r, g, b)
+
+    # Randomly choose colors for the objects.
+    fill_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
+    outline_colors = [np.random.choice(list(range(256)), 3) for i in range(len(objects))]
+
 
 
 
@@ -136,17 +155,14 @@ def save_frame(win, frame):
 
 
 # check if the movie filename already exists to avoiding overwriting files.
-try:
-    movie_filename = args.name
-    if not os.path.exists('./movie_files'):
-       os.system('mkdir ./movie_files') 
-    elif os.path.exists('./movie_files/' + movie_filename + ".mp4"):
-        answer = input("Filename " + "./movie_files/" + movie_filename + ".mp4 already exists. Overwrite? [y/n] : ")
-        if 'n' in answer.lower():
-            raise ValueError()
-except:
-    raise ValueError("\n\tmake_movies.py expects an argument - the output movie file name. This name should not include spaces or be a pre-existing filename.")
-
+movie_filename = args.name
+full_path = Path(args.folder) / (movie_filename + '.mp4')
+if not os.path.exists(args.folder):
+   os.system('mkdir ' + args.folder) 
+elif os.path.exists(full_path):
+    answer = input("Filename " + str(full_path.absolute()) + " already exists. Overwrite? [y/n] : ")
+    if 'n' in answer.lower():
+        sys.exit(0)
 
 # create temporary directories to save the frames/images that are generated
 try:
@@ -206,8 +222,7 @@ for frame in range(1, len(t_vals)):
 
 
 # Convert all these frames into a movie
-movie_filename = './movie_files/' + movie_filename + ".mp4"
-os.system("ffmpeg -r {:d} -i ./tmp_images/frame%05d.png -vcodec mpeg4 -y {:s}".format(movie_fps, movie_filename))
+os.system("ffmpeg -r {:d} -i ./tmp_images/frame%05d.png -vcodec mpeg4 -y {:s}".format(movie_fps, str(full_path.absolute())))
 
 # delete the temporary folders created
 os.system('rm -rf tmp_images')

@@ -33,6 +33,7 @@ def p(x):
 parser = argparse.ArgumentParser()
 parser.add_argument('-load', help='file name for a previously trained RNN that you wish to train further.', required=True) # specify a full pre-trained RNN model to load
 parser.add_argument('-movie_folder', help='path to folder with movie files to perform analysis on',required=True)
+parser.add_argument('--svm', action='store_true')
 args = parser.parse_args()
 
 
@@ -103,7 +104,10 @@ for f in os.scandir(args.movie_folder):
         filename = Path(args.movie_folder) / 'labels.csv'
         df = pd.read_csv(filename, sep=',', header=None)
         labels = df.values
+        labels = np.reshape(labels, (-1, ))
 
+print(labels.shape)
+print(labels)
 
 
 # ================================================================================================
@@ -121,15 +125,17 @@ for layer in full_model.layers:
     if layer.name == 'rnn': break
     cnn.add(layer)
 
-# RUN SVD and plot the singular values
-if True:
-    rnn_predicted = rnn.predict(movies) # the [0] just takes predictions for first video
-    rnn_predicted = rnn_predicted.reshape(num_movies * num_frames, -1)
-    p(rnn_predicted.shape)
+# calculate activations of RNN and encoder in response to given movies
+rnn_representation = rnn.predict(movies) # the [0] just takes predictions for first video
+cnn_representation = cnn.predict(movies) # the [0] just takes predictions for first video
 
-    cnn_predicted = cnn.predict(movies) # the [0] just takes predictions for first video
-    cnn_predicted = cnn_predicted.reshape(num_movies * num_frames, -1)
-    p(cnn_predicted.shape)
+# RUN SVD and plot the singular values
+if False:
+    rnn_representation = rnn_representation.reshape(num_movies * num_frames, -1)
+    p(rnn_representation.shape)
+
+    cnn_representation = cnn_representation.reshape(num_movies * num_frames, -1)
+    p(cnn_representation.shape)
 
     flattened_movies = movies.reshape(num_movies * num_frames, -1)
     s_movies = np.linalg.svd(flattened_movies, compute_uv=False)
@@ -145,7 +151,7 @@ if True:
     plt.ylim([1e-4, 10])
 
     
-    [u_rnn, s_rnn, vh_rnn] = np.linalg.svd(rnn_predicted, full_matrices = False)
+    [u_rnn, s_rnn, vh_rnn] = np.linalg.svd(rnn_representation, full_matrices = False)
 
     plt.subplot(132)
     plt.title('RNN Neural Representation Singular Values')
@@ -157,7 +163,7 @@ if True:
     plt.ylim([-0.1,1.1])
 
 
-    [u_cnn, s_cnn, vh_cnn] = np.linalg.svd(cnn_predicted, full_matrices = False)
+    [u_cnn, s_cnn, vh_cnn] = np.linalg.svd(cnn_representation, full_matrices = False)
 
     plt.subplot(133)
     plt.title('CNN Neural Representation Singular Values')
@@ -170,5 +176,26 @@ if True:
     plt.show()
 
 
-# plot stuff ====================================================================================
 
+# RUN CLASSIFICATION
+if args.svm:
+    from sklearn import svm
+    classifier_rnn = svm.SVC(kernel='linear')
+    classifier_cnn = svm.SVC(kernel='linear')
+
+    # NOTE: don't need a test set?
+
+    # NOTE: randomly choose a frame in movie for classification?
+
+    # NOTE Do we really want to stack all frames for a given movie? Or should we
+    # do it frame by frame instead? or maybe just use the representation for the last
+    # frame in classification?
+    rnn_representation = rnn_representation.reshape(num_movies, -1)
+    classifier_rnn.fit(rnn_representation, labels)
+    print(classifier_rnn.score(rnn_representation, labels))
+
+
+
+    cnn_representation = cnn_representation.reshape(num_movies, -1)
+    classifier_cnn.fit(cnn_representation, labels)
+    print(classifier_cnn.score(cnn_representation, labels))
