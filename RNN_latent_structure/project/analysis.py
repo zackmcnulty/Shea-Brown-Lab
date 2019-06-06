@@ -20,6 +20,8 @@ from matplotlib import pyplot as plt
 import argparse
 import time
 import pandas as pd
+from pydmd import DMD
+
 
 # HELPFUL DEBUGGING METHOD
 import inspect
@@ -35,6 +37,7 @@ parser.add_argument('-load', help='file name for a previously trained RNN that y
 parser.add_argument('-movie_folder', help='path to folder with movie files to perform analysis on',required=True)
 parser.add_argument('--svm', action='store_true')
 parser.add_argument('--uniform', action='store_true')
+parser.add_argument('--isomap', type=int)
 args = parser.parse_args()
 
 
@@ -95,6 +98,7 @@ for f in os.scandir(args.movie_folder):
         labels = df.values
         labels = np.reshape(labels, (-1, ))
 
+# Sort filenames so they line up appropriately with the labels which are ordered by number
 file_names = sorted(file_names)
 
 for f in file_names:
@@ -225,24 +229,29 @@ if args.svm:
 
     # CONTROL: randomly assign labels to representations
 
+
+
+
+
+
 if args.uniform:
 
     # CNN interesting neurons: 2,6 = flat,  32=periodic, 16=two-peak periodic
     # RNN interesting neurons: 25=periodic, 61
-    #neuron_numbers = [1,2,3,4,5,6,7,8] # which neurons to make plots for
-    neuron_numbers = list(range(61, 64)) # which neurons to make plots for
+    #neuron_numbers = [16,25, 32] # which neurons to make plots for
+    neuron_numbers = list(range(10,20))
 
     # PLOT activation of a single neuron over course of an entire movie
-    plot_rows = 1
-    plot_cols = len(neuron_numbers)
+    plot_rows = 2
+    plot_cols = len(neuron_numbers) / plot_rows
 
     plt.figure(99)
-    plt.xlabel('Frame number')
-    plt.ylabel('Neuron Activation')
     movie_nums = list(range(180))
     for i, neuron in enumerate(neuron_numbers):
         plt.subplot(plot_rows, plot_cols, i+1)
         plt.title('RNN representation (Neuron {})'.format(neuron))
+        plt.xlabel('Frame number')
+        plt.ylabel('Neuron Activation')
 
         for num in movie_nums:
             plt.plot(rnn_representation[num, :, neuron])
@@ -252,11 +261,11 @@ if args.uniform:
     plt.show()
 
     plt.figure(123)
-    plt.xlabel('Frame number')
-    plt.ylabel('Neuron Activation')
     for i, neuron in enumerate(neuron_numbers):
         plt.subplot(plot_rows, plot_cols, i+1)
-        plt.title('Decoder representation (Neuron {})'.format(neuron))
+        plt.title('Decoder (Neuron {})'.format(neuron))
+        plt.xlabel('Frame number')
+        plt.ylabel('Neuron Activation')
 
         for num in movie_nums:
             plt.plot(cnn_representation[num, :, neuron])
@@ -267,20 +276,76 @@ if args.uniform:
 
 
 
+    # PLOT Principal Components of time dynamics
+    num_pcs = 1
+
+    plt.figure(146)
+    for i, neuron in enumerate(neuron_numbers):
+        plt.subplot(plot_rows, plot_cols, i+1)
+        plt.title('RNN representation (Neuron {})'.format(neuron))
+        plt.xlabel('Frame number')
+        plt.ylabel('Neuron Activation')
+        
+#        [u, s, v] = np.linalg.svd(rnn_representation[:, :, neuron].T, full_matrices=False)
+        dmd = DMD(svd_rank = num_pcs)
+        dmd.fit(rnn_representation[:, :, neuron].T)
+
+
+        for mode in dmd.modes.T:
+#            plt.plot(u[i, :])
+            plt.plot(mode.real)
+             
+
+        plt.legend(['Mode {}'.format(k+1) for k in range(num_pcs)])
+        
+    plt.show()
+
+
+    plt.figure(1445)
+    for i, neuron in enumerate(neuron_numbers):
+        plt.subplot(plot_rows, plot_cols, i+1)
+        plt.title('CNN representation (Neuron {})'.format(neuron))
+        plt.xlabel('Frame number')
+        plt.ylabel('Neuron Activation')
+        
+#        [u, s, v] = np.linalg.svd(rnn_representation[:, :, neuron].T, full_matrices=False)
+
+        # DMD fails on the case where CNN activations always zero
+        try:
+            dmd = DMD(svd_rank = num_pcs)
+            dmd.fit(cnn_representation[:, :, neuron].T)
+
+
+            for mode in dmd.modes.T:
+    #            plt.plot(u[i, :])
+                plt.plot(mode.real)
+        except:
+            pass
+             
+
+        plt.legend(['Mode {}'.format(k+1) for k in range(num_pcs)])
+        
+    plt.show()
+
+
+
+
+
     # PLOT activation of a single neuron at a specific frame across many different movies (with different angles of oscillation)
-    # RNN important: 44=clear angle preference, 58
-    # CNN important: 44=clear angle preference, 58
+    # RNN important: 44=clear angle preference, 58, 14 maybe
+    # CNN important: 44=clear angle preference, 58, 27 maybe
+    neuron_numbers = [27, 44, 58] # which neurons to make plots for
 
     plot_rows = 1
     plot_cols = len(neuron_numbers) 
 
     plt.figure(99)
-    plt.xlabel('Axis Angle (degrees)')
-    plt.ylabel('Neuron Activation')
     frame_nums = list(range(30))
     for i, neuron in enumerate(neuron_numbers):
         plt.subplot(plot_rows, plot_cols, i+1)
         plt.title('RNN representation (Neuron {})'.format(neuron))
+        plt.xlabel('Axis Angle (degrees)')
+        plt.ylabel('Neuron Activation')
 
         for num in frame_nums:
             plt.plot(labels, rnn_representation[:, num, neuron])
@@ -295,6 +360,8 @@ if args.uniform:
     for i, neuron in enumerate(neuron_numbers):
         plt.subplot(plot_rows, plot_cols, i+1)
         plt.title('Decoder representation (Neuron {})'.format(neuron))
+        plt.xlabel('Axis Angle (degrees)')
+        plt.ylabel('Neuron Activation')
 
         for num in frame_nums:
             plt.plot(labels, cnn_representation[:, num, neuron])
@@ -305,6 +372,26 @@ if args.uniform:
 
 
 
-    # PLOT activation of a single neuron at a specific frame across many different movies (with different angles of oscillation)
+if args.isomap is not None:
+    from sklearn import manifold
 
+    n_neighbors =  5 # number of neighbors to consider for each datapoint when determining geodesic distances
+    n_components = args.isomap  # dimension of manifold to look for
+    rnn_embedding = manifold.Isomap(n_neighbors, n_components)
+    cnn_embedding = manifold.Isomap(n_neighbors, n_components)
 
+    # randomly select frames to use for embedding
+    rnn_random_frames = np.empty((num_movies, rnn_representation.shape[2]))
+    cnn_random_frames = np.empty((num_movies, rnn_representation.shape[2]))
+
+    random_indices = np.random.choice(list(range(1, num_frames)), num_movies)
+
+    for movie_num in range(num_movies):
+        rnn_random_frames[movie_num, :] = rnn_representation[movie_num, random_indices[movie_num], :]
+        cnn_random_frames[movie_num, :] = cnn_representation[movie_num, random_indices[movie_num], :]
+
+    rnn_transformed = rnn_embedding.fit_transform(rnn_random_frames)
+    cnn_transformed = cnn_embedding.fit_transform(cnn_random_frames)
+
+    p(rnn_embedding.reconstruction_error()) 
+    p(cnn_embedding.reconstruction_error()) 
