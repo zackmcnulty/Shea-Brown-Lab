@@ -258,7 +258,7 @@ if args.uniform:
 
 #        plt.legend(['Movie {} ({} degrees)'.format(num + 1, int(labels[num])) for num in movie_nums])
 
-    plt.show()
+    #plt.show()
 
     plt.figure(123)
     for i, neuron in enumerate(neuron_numbers):
@@ -325,6 +325,36 @@ if args.uniform:
 
         plt.legend(['Mode {}'.format(k+1) for k in range(num_pcs)])
         
+    plt.show()
+
+
+
+
+    # PLOT PRINCIPAL COMPONENTS OF ALL TIME DYNAMICS TOGETHER =======================
+    num_pcs = 3
+    dmd = DMD(svd_rank = num_pcs)
+    dmd.fit(rnn_representation.reshape(64 * num_movies, num_frames).T)
+
+    plt.figure(1201)
+    plt.title('All RNN Neurons Modes')
+    for mode in dmd.modes.T:
+        plt.plot(mode.real)
+    
+    plt.xlabel('Frame')
+    plt.legend(['Mode {}'.format(i+1) for i in range(num_pcs)])
+    plt.show()
+
+
+    dmd = DMD(svd_rank = num_pcs)
+    dmd.fit(cnn_representation.reshape(64 * num_movies, num_frames).T)
+
+    plt.figure(1201)
+    plt.title('All Encoder Neurons Modes')
+    for mode in dmd.modes.T:
+        plt.plot(mode.real)
+
+    plt.xlabel('Frame')
+    plt.legend(['Mode {}'.format(i+1) for i in range(num_pcs)])
     plt.show()
 
 
