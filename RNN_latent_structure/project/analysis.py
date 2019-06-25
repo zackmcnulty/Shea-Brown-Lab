@@ -21,6 +21,9 @@ import argparse
 import time
 import pandas as pd
 from pydmd import DMD
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.cm as cm
+
 
 
 # HELPFUL DEBUGGING METHOD
@@ -36,8 +39,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-load', help='file name for a previously trained RNN that you wish to train further.', required=True) # specify a full pre-trained RNN model to load
 parser.add_argument('-movie_folder', help='path to folder with movie files to perform analysis on',required=True)
 parser.add_argument('--svm', action='store_true')
+parser.add_argument('--svd', action='store_true')
+parser.add_argument('--positional_activity', action='store_true')
 parser.add_argument('--uniform', action='store_true')
+parser.add_argument('--pca', action='store_true')
 parser.add_argument('--isomap', type=int)
+parser.add_argument('--no_demean', action='store_true', default=False,  help='flag to not demean the rnn/cnn neuron representations')
 args = parser.parse_args()
 
 
@@ -137,15 +144,32 @@ for layer in full_model.layers:
 # calculate activations of RNN and encoder in response to given movies
 rnn_representation = rnn.predict(movies) 
 cnn_representation = cnn.predict(movies) 
-p(rnn_representation.shape)
-p(cnn_representation.shape)
 
+
+# Mean subtract from data
+if not args.no_demean:
+    rnn_mean = np.mean(np.mean(rnn_representation, axis=0), axis=0)
+    cnn_mean = np.mean(np.mean(cnn_representation, axis=0), axis=0)
+    rnn_representation -= rnn_mean
+    cnn_representation -= cnn_mean
+
+#p(cnn_mean.shape)
+#p(rnn_mean.shape)
+
+#p(rnn_representation.shape)
+#p(cnn_representation.shape)
+
+# ========================================================================================================================
 # RUN SVD and plot the singular values
-if False:
-    rnn_rep = rnn_representation.reshape(num_movies * num_frames, -1)
+if args.svd:
+
+    # Here, we store the neural representation of  each frame as a column in our matrix. Thus, when we
+    # take the SVD the columns of U will form a basis for neural representation space and the columns of SV*
+    # give the coordinates within this space.
+    rnn_rep = rnn_representation.reshape(-1, num_movies * num_frames)
     p(rnn_representation.shape)
 
-    cnn_rep = cnn_representation.reshape(num_movies * num_frames, -1)
+    cnn_rep = cnn_representation.reshape(-1, num_movies * num_frames)
     p(cnn_representation.shape)
 
     flattened_movies = movies.reshape(num_movies * num_frames, -1)
@@ -188,50 +212,58 @@ if False:
 
 
 
-# RUN CLASSIFICATION
-if args.svm:
-    from sklearn import svm
-    classifier_rnn = svm.SVC(kernel='linear')
-    classifier_cnn = svm.SVC(kernel='linear')
-
-    # NOTE: don't need a test set?
-
-    # NOTE: randomly choose a frame in movie for classification?
-    rnn_random_frames = np.empty((num_movies, rnn_representation.shape[2]))
-    cnn_random_frames = np.empty((num_movies, rnn_representation.shape[2]))
-
-    random_indices = np.random.choice(list(range(1, num_frames)), num_movies)
-
-    for movie_num in range(num_movies):
-        rnn_random_frames[movie_num, :] = rnn_representation[movie_num, random_indices[movie_num], :]
-        cnn_random_frames[movie_num, :] = cnn_representation[movie_num, random_indices[movie_num], :]
-
-    print(rnn_random_frames.shape)
-
-    classifier_rnn.fit(rnn_random_frames, labels)
-    p(classifier_rnn.score(rnn_random_frames, labels)) # print RNN classification score
-    
-    classifier_cnn.fit(cnn_random_frames, labels)
-    p(classifier_cnn.score(cnn_random_frames, labels)) # print CNN classification score
-
-    # NOTE Do we really want to stack all frames for a given movie? Or should we
-    # do it frame by frame instead? or maybe just use the representation for the last
-    # frame in classification?
-    rnn_representation = rnn_representation.reshape(num_movies, -1)
-    classifier_rnn.fit(rnn_representation, labels)
-    p(classifier_rnn.score(rnn_representation, labels))
+    # RNN trajectories in PC space over time (frame by frame)
+    movie_nums = [0]
+    num_pcs = 3
+    for movie in movie_nums:
+        movie_pc_coords = np.zeros((num_frames, 3))
+        for frame in range(num_frames):
+            movie_pc_coords[frame, :num_pcs] =  np.multiply(s_rnn[:num_pcs], vh_rnn[:num_pcs, movie + frame])
 
 
-    cnn_representation = cnn_representation.reshape(num_movies, -1)
-    classifier_cnn.fit(cnn_representation, labels)
-    p(classifier_cnn.score(cnn_representation, labels))
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
 
+        colors = cm.rainbow(np.linspace(0, 1, num_frames))
+        for i in range(num_frames):
+            ax.plot([movie_pc_coords[i, 0]], [movie_pc_coords[i, 1]], [movie_pc_coords[i,2]], 'o', color=colors[i], markersize=5)
 
-    # CONTROL: randomly assign labels to representations
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        ax.set_zlabel('PC3')
+        plt.title('RNN PC Trajectory (movie {})'.format(movie))
+        plt.show()
+
+    # CNN trajectories in PC space over time (frame by frame)
+    movie_nums = [0,5,10,15,20,25,30]
+    num_pcs = 3
+    for movie in movie_nums:
+        movie_pc_coords = np.zeros((num_frames, 3))
+        for frame in range(num_frames):
+            movie_pc_coords[frame, :num_pcs] =  np.multiply(s_cnn[:num_pcs], vh_cnn[:num_pcs, movie + frame])
 
 
 
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
 
+        colors = cm.rainbow(np.linspace(0, 1, num_frames))
+        for i in range(num_frames):
+            ax.plot([movie_pc_coords[i, 0]], [movie_pc_coords[i, 1]], [movie_pc_coords[i,2]], 'o', color=colors[i], markersize=5)
+
+        plt.xlabel('PC1')
+        plt.ylabel('PC2')
+        ax.set_zlabel('PC3')
+        plt.title('CNN PC Trajectory (movie {})'.format(movie))
+        plt.show()
+
+# ========================================================================================================================
+
+
+
+
+
+# ========================================================================================================================
 
 
 if args.uniform:
@@ -402,26 +434,125 @@ if args.uniform:
 
 
 
-if args.isomap is not None:
-    from sklearn import manifold
 
-    n_neighbors =  5 # number of neighbors to consider for each datapoint when determining geodesic distances
-    n_components = args.isomap  # dimension of manifold to look for
-    rnn_embedding = manifold.Isomap(n_neighbors, n_components)
-    cnn_embedding = manifold.Isomap(n_neighbors, n_components)
+# =========================================================================================================
 
-    # randomly select frames to use for embedding
-    rnn_random_frames = np.empty((num_movies, rnn_representation.shape[2]))
-    cnn_random_frames = np.empty((num_movies, rnn_representation.shape[2]))
+# Plot activity with respect to position
+if args.positional_activity:
 
-    random_indices = np.random.choice(list(range(1, num_frames)), num_movies)
+    import dynamical_systems as ds
+    import get_trajectory
 
-    for movie_num in range(num_movies):
-        rnn_random_frames[movie_num, :] = rnn_representation[movie_num, random_indices[movie_num], :]
-        cnn_random_frames[movie_num, :] = cnn_representation[movie_num, random_indices[movie_num], :]
+    # RNN Positional Activities
+    #neuron_nums=list(range(64))
+    neuron_nums=[]
+    for neuron in neuron_nums:
 
-    rnn_transformed = rnn_embedding.fit_transform(rnn_random_frames)
-    cnn_transformed = cnn_embedding.fit_transform(cnn_random_frames)
+        plt.figure()
+        cmap = plt.get_cmap('plasma')
+        
+        for i in range(num_movies):
+            # First entry in all_parameter_vals is the parameter number: 
+            next_theta = np.pi * float(labels[i]) / 180.0
+            objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=next_theta), )
+            (t_vals, all_parameter_vals) = get_trajectory.get_trajectories(objects, num_steps=num_frames, return_all=True, num_params=3)
 
-    p(rnn_embedding.reconstruction_error()) 
-    p(cnn_embedding.reconstruction_error()) 
+            for j in range(num_frames):
+                rnn_activity = rnn_representation[i, j, neuron]
+                plt.plot([all_parameter_vals[0, 0, j]], [all_parameter_vals[1,0, j]], 'o', markersize=5, color=cmap(rnn_activity))
+
+
+        plt.xlabel('x coordinate')
+        plt.ylabel('y coordinate')
+        plt.title('RNN Neuron {}'.format(neuron + 1))
+        plt.savefig('analysis_plots/positional_activity/rnn_neuron_{:02}.png'.format(neuron + 1))
+        #plt.show()
+
+
+
+    # CNN Positional Activities
+    neuron_nums = []
+    for neuron in neuron_nums:
+
+        plt.figure()
+        cmap = plt.get_cmap('plasma')
+        
+        for i in range(num_movies):
+            # First entry in all_parameter_vals is the parameter number: 
+            next_theta = np.pi * float(labels[i]) / 180.0
+            objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=next_theta), )
+            (t_vals, all_parameter_vals) = get_trajectory.get_trajectories(objects, num_steps=num_frames, return_all=True, num_params=3)
+
+            for j in range(num_frames):
+                cnn_activity = cnn_representation[i, j, neuron]
+                plt.plot([all_parameter_vals[0, 0, j]], [all_parameter_vals[1,0, j]], 'o', markersize=5, color=cmap(cnn_activity))
+
+
+        plt.xlabel('x coordinate')
+        plt.ylabel('y coordinate')
+        plt.title('CNN Neuron {}'.format(neuron + 1))
+        plt.savefig('analysis_plots/positional_activity/cnn_neuron_{:02}.png'.format(neuron + 1))
+#        plt.show()
+
+
+    # RNN radial Activities
+    neuron_nums=list(range(64))
+    for neuron in neuron_nums:
+
+        plt.figure()
+        cmap = plt.get_cmap('plasma')
+        
+        for i in range(num_movies):
+            # First entry in all_parameter_vals is the parameter number: 
+            next_theta = np.pi * float(labels[i]) / 180.0
+            objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=next_theta), )
+            (t_vals, all_parameter_vals) = get_trajectory.get_trajectories(objects, num_steps=num_frames, return_all=True, num_params=3)
+
+            for j in range(num_frames):
+                rnn_activity = rnn_representation[i, j, neuron]
+                x = all_parameter_vals[0,0, j]
+                y = all_parameter_vals[1,0, j]
+
+                center_x = 0.5 # what x,y coordinate the oscillation is centered around
+                center_y = 0.5
+                r = np.sqrt((x-center_x)**2 + (y-center_y)**2)
+                theta = np.arctan2(y - center_y, x - center_x)
+                plt.plot([theta], [r], 'o', markersize=5, color=cmap(rnn_activity))
+
+
+        plt.ylabel('radius')
+        plt.xlabel('theta')
+        plt.title('RNN Neuron {}'.format(neuron + 1))
+        plt.savefig('analysis_plots/positional_activity/rnn_radial_neuron_{:02}.png'.format(neuron + 1))
+#        plt.show()
+
+    # CNN radial Activities
+    neuron_nums=list(range(64))
+    for neuron in neuron_nums:
+
+        plt.figure()
+        cmap = plt.get_cmap('plasma')
+        
+        for i in range(num_movies):
+            # First entry in all_parameter_vals is the parameter number: 
+            next_theta = np.pi * float(labels[i]) / 180.0
+            objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=next_theta), )
+            (t_vals, all_parameter_vals) = get_trajectory.get_trajectories(objects, num_steps=num_frames, return_all=True, num_params=3)
+
+            for j in range(num_frames):
+                cnn_activity = cnn_representation[i, j, neuron]
+                x = all_parameter_vals[0,0, j]
+                y = all_parameter_vals[1,0, j]
+
+                center_x = 0.5 # what x,y coordinate the oscillation is centered around
+                center_y = 0.5
+                r = np.sqrt((x-center_x)**2 + (y-center_y)**2)
+                theta = np.arctan2(y - center_y, x - center_x)
+                plt.plot([theta], [r], 'o', markersize=5, color=cmap(cnn_activity))
+
+
+        plt.xlabel('theta')
+        plt.ylabel('radius')
+        plt.title('CNN Neuron {}'.format(neuron + 1))
+        plt.savefig('analysis_plots/positional_activity/cnn_radial_neuron_{:02}.png'.format(neuron + 1))
+#        plt.show()
