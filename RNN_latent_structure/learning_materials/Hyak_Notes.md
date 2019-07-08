@@ -230,8 +230,10 @@ batch/slurm file. An example of this is given below.
 	
 Running the commands `squeue -u zmcnulty` or `squeue -p group_name` to see your/your groups respectively list of jobs. It will output lines of the form:
 
+```
 JOBID    PARTITION     NAME       USER      ST       TIME   NODES   NODELIST(REASON)
 997755       stf      test_job   zmcnulty   PD       0:00     1       (Resources)
+```
 
 This gives the job ID, the group name, the job name, the user running the job, whether the job is running (R) or waiting (PD), number of nodes the job is running on, and the nodes the job is running on or a reason (REASON) the job is not running.
 To cancel a job at any time, just do `scancel job_ID`
