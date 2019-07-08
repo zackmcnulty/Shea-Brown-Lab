@@ -39,14 +39,14 @@ on the Linux OS, check out this [tutorial](https://www.tutorialspoint.com/unix/i
 
 ## Types of Nodes
 
-- *Log-on Nodes*: When you initially SSH into hyak when you log on, this is the node you start with. It handles all the basic operations allowing you to navigate through Hyak,
+-**Log-on Nodes**: When you initially SSH into hyak when you log on, this is the node you start with. It handles all the basic operations allowing you to navigate through Hyak,
 submit jobs, and request access to other nodes. These do NOT have a lot of computing power, and should not be used for anything beyond these simple tasks
 
-- *Build Nodes*: These are nodes that all users have access to. They are set aside to help install needed software packages and compile code. Because they are often quick to obtain, they are also helpful
+- **Build Nodes**: These are nodes that all users have access to. They are set aside to help install needed software packages and compile code. Because they are often quick to obtain, they are also helpful
 for testing (in interactive mode; see below) whether your code runs on small samples and do some possible debugging. However, no large computations should be performed on these nodes. These nodes have access to the internet and thus are helpful for file transfers, using git, etc.
     - To get access to a build node, use the command: `srun -p build --nodes 1 --pty /bin/bash`
 
-- *Compute Nodes*: This is what you are really paying for. These are the nodes with a ton of computational power that you want to be running your large jobs on. You only have unrestricted access to the nodes your group
+- **Compute Nodes**: This is what you are really paying for. These are the nodes with a ton of computational power that you want to be running your large jobs on. You only have unrestricted access to the nodes your group
 buys directly. However, Hyak has a cool feature called Backfill that allows you to run on the unused nodes owned by other people. However, there are some restrictions that come with this (see Backfill section below). These
 nodes do NOT have access to the internet, so nothing can be downloaded outside Hyak from here.
 
@@ -157,7 +157,6 @@ Then, we can use pip to download to a specific directory with the `--target` opt
 
 ```
 pip install --ignore-installed --target=/gscratch/group_name/user_name/python_libraries/ package_name  
-
 ```
 As an example, for my user on the STF account I use:
 ```
@@ -218,11 +217,11 @@ batch/slurm file. An example of this is given below.
 
 #### Running The Jobs : Basic Commands
 
-* sbatch : run a batch job; A batch job is a computer program or set of programs processed in batch mode. This means that a sequence of commands to be executed by the operating system is listed in a file (often called a batch file, command file, or shell script) and submitted for execution as a single unit. 
+* `sbatch` : run a batch job; A batch job is a computer program or set of programs processed in batch mode. This means that a sequence of commands to be executed by the operating system is listed in a file (often called a batch file, command file, or shell script) and submitted for execution as a single unit. 
     * The file containing all the commands to run and specifying information about the number of nodes to use, memory allocation, etc is called the slurm script.
     * usage: `sbatch <batch file>`   (e.g. sbatch myscript.slurm)
 
-* srun : run a job in interactive mode. Rather than specifying all commands in a slurm script for a batch job, you type the commands one by one in the console
+* `srun` : run a job in interactive mode. Rather than specifying all commands in a slurm script for a batch job, you type the commands one by one in the console
     * usage: `srun -N num_nodes -A group_name -p partition_name --time=2:00:00 --mem=20G --pty /bin/bash`
     * Here, the group name is the group whose nodes you are running on (i.e. STF for the student tech fund) and the partition name is? (i.e. build, group_name, stf-int, ...)
     * Mostly, the "build" partition is used because it can connect to outside hyak. Thus, its useful for using git, transferring files to/from Hyak, and installing software packages (like a Python Library).
