@@ -25,9 +25,6 @@ ssh -X yourUWnetid@mox.hyak.uw.edu  # for Mox
 ssh -X yourUWnetid@ikt.hyak.uw.edu  # for Ikt (older branch of Hyak)
 ```
 
-
-
-
 you will find yourself in your users home directory. These directories have a small memory capacity (10GB) and are NOT meant to hold any significantly large files.
 Only really store files here that are meant to be completely private like SSH keys or possibly logon scripts. For all data from experiments and what not, these files
 should be stored in the gscratch directories (see GSCRATCH section below).  
@@ -39,7 +36,7 @@ on the Linux OS, check out this [tutorial](https://www.tutorialspoint.com/unix/i
 
 ## Types of Nodes
 
--**Log-on Nodes**: When you initially SSH into hyak when you log on, this is the node you start with. It handles all the basic operations allowing you to navigate through Hyak,
+- **Log-on Nodes**: When you initially SSH into hyak when you log on, this is the node you start with. It handles all the basic operations allowing you to navigate through Hyak,
 submit jobs, and request access to other nodes. These do NOT have a lot of computing power, and should not be used for anything beyond these simple tasks
 
 - **Build Nodes**: These are nodes that all users have access to. They are set aside to help install needed software packages and compile code. Because they are often quick to obtain, they are also helpful
@@ -134,7 +131,7 @@ If you are downloading a ton of software packages, consider putting the conda en
 
 ```
 conda create --prefix /gscratch/group_name/user_name/environment_name
-conda activate /gscratch/group_name/user_name/environment_name
+source activate /gscratch/group_name/user_name/environment_name
 ```
 
 
@@ -189,6 +186,16 @@ wget https://www.python.org/ftp/python/3.7.3/Python-3.7.3.tgz
 Unzipping this file (`tar -xzf Python-3.7.3.tgz`) you should have a folder. In this folder will be a README file typically with further instructions on how to compile the code.
 
 
+#### Making a new Module
+
+If you are downloading large and commonly used software, consider making a module so others can use it with the `module load <module_name>` command. To do
+so, download and compile the required code to its own folder within the directory `/sw/contrib/`. Again, you will primarily use wget and curl to do the downloading
+and follow specific instructions from the software for compiling/configuring the software. Once this is complete, you will have to build a corresponding modulefile
+in the directory `/sw/modules-1.775/modulefiles/contrib/`. This tells the operating system where to find the required software by modifying relevant PATH variables.
+See some of the other modulefiles in the directory and the [documentation](https://modules.readthedocs.io/en/latest/modulefile.html) for more advice on how to write these files.
+Once this is complete, you (and all other users) can use the software anytime they want just with `module load /contrib/path/to/modulefile`.:wq
+
+
 
 
 ## Scheduling Jobs
@@ -237,13 +244,16 @@ JOBID    PARTITION     NAME       USER      ST       TIME   NODES   NODELIST(REA
 This gives the job ID, the group name, the job name, the user running the job, whether the job is running (R) or waiting (PD), number of nodes the job is running on, and the nodes the job is running on or a reason (REASON) the job is not running.
 To cancel a job at any time, just do `scancel job_ID`
 
+If you want information on your groups partition of Hyak (i.e. what nodes your group owns), use the `sinfo -p group_name` command.
+
 
 
 
 ## Backfill
 
 The backfill is one of the coolest features of Hyak. Essentially, if someone is not using one of their nodes at any given time, you can run your code off it!
-However, this comes with a catch. As soon as that person wants access to their node, you get kicked off. But Hyak can restart your job?
+However, this comes with a catch. As soon as that person wants access to their node, you get kicked off. Some info can be found [here](https://wiki.cac.washington.edu/display/hyakusers/Mox_checkpoint) on the Hyak Wiki.
+To specify you want your job to run in backfill, simply change the partition / account name in the batch file. Specifically, use the account `group_name-ckpt` and the partition `ckpt`.
 
 
 
@@ -305,6 +315,5 @@ module load anaconda3_5.3
 ## My Program
 conda activate /gscratch/stf/zmcnulty/env  # conda environment with all my needed software
 python3 analysis.py -load models/rnn_predictior_BCE_dt_10_l1_0.0.h5 -movie_folder test_movies/uniform/ --positional_activity
-
 
 ```
