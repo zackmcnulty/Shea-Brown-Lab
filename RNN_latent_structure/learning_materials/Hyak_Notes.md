@@ -1,6 +1,6 @@
 # HYAK Notes
 
-### What is Hyak?
+## What is Hyak?
 
 Hyak is a supercomputer owned by UW. It consists of a collection of high-throughput nodes (each of which is roughly equivalent to a high-end server)
 that are capable of parallel computation. Even if you do not plan to parallelize any work, the nodes are still incredibly fast to work on and have
@@ -16,11 +16,14 @@ If you are a student at UW (graduate or undergraduate) you can apply for free ac
 nodes for use by the Research Computing Club at UW. To get access to these nodes, follow the instructions found [here](http://depts.washington.edu/uwrcc/getting-started-2/getting-started/).
 This is what I have been using and it works pretty well. 
 
-### Logging In and Navigating Hyak
+## Logging In and Navigating Hyak
 
-Just like a remote server, Hyak is accessed through SSH (and it also uses 2-factor verification). When you SSH into Hyak with:
+Just like a remote server, Hyak is accessed through SSH (and it also uses 2-factor verification). When you SSH into Hyak with (either Mox or Ikt; depends on where your group's nodes are):
 
-`ssh -X yourUWnetid@mox.hyak.uw.edu`
+```python
+ssh -X yourUWnetid@mox.hyak.uw.edu  # for Mox
+ssh -X yourUWnetid@ikt.hyak.uw.edu  # for Ikt (older branch of Hyak)
+```
 
 
 
@@ -34,22 +37,22 @@ Like most servers, Hyak runs on the Linux operating system. Thus, you will inter
 on the Linux OS, check out this [tutorial](https://www.tutorialspoint.com/unix/index.htm).
 
 
-### Types of Nodes
+## Types of Nodes
 
-- Log-on Nodes: When you initially SSH into hyak when you log on, this is the node you start with. It handles all the basic operations allowing you to navigate through Hyak,
+- *Log-on Nodes*: When you initially SSH into hyak when you log on, this is the node you start with. It handles all the basic operations allowing you to navigate through Hyak,
 submit jobs, and request access to other nodes. These do NOT have a lot of computing power, and should not be used for anything beyond these simple tasks
 
-- Build Nodes: These are nodes that all users have access to. They are set aside to help install needed software packages and compile code. Because they are often quick to obtain, they are also helpful
+- *Build Nodes*: These are nodes that all users have access to. They are set aside to help install needed software packages and compile code. Because they are often quick to obtain, they are also helpful
 for testing (in interactive mode; see below) whether your code runs on small samples and do some possible debugging. However, no large computations should be performed on these nodes. These nodes have access to the internet and thus are helpful for file transfers, using git, etc.
     - To get access to a build node, use the command: `srun -p build --nodes 1 --pty /bin/bash`
 
-- Compute Nodes: This is what you are really paying for. These are the nodes with a ton of computational power that you want to be running your large jobs on. You only have unrestricted access to the nodes your group
+- *Compute Nodes*: This is what you are really paying for. These are the nodes with a ton of computational power that you want to be running your large jobs on. You only have unrestricted access to the nodes your group
 buys directly. However, Hyak has a cool feature called Backfill that allows you to run on the unused nodes owned by other people. However, there are some restrictions that come with this (see Backfill section below). These
 nodes do NOT have access to the internet, so nothing can be downloaded outside Hyak from here.
 
 
 
-### GSCRATCH
+## GSCRATCH
 
 While you have a home directory, the directory you start in when you log in, this location has a small memory capacity allocated to it. Beyond private information (i.e. SSH keys, logon scripts, etc)
 most files should be stored instead in your gscratch folder. The location of these directories are:
@@ -69,7 +72,7 @@ scp -r local_folder/ user_id@mox.hyak.uw.edu:path/to/folder/on/server
 scp -r project/ zmcnulty@mox.hyak.uw.edu:/gscratch/stf/zmcnulty
 ```
 
-This copies the entire project/ folder from my local machine (-r stands for recursive; copy folder and all its subfolders, etc) to my
+The second command copies the entire project/ folder from my local machine (-r stands for recursive; copy folder and all its subfolders, etc) to my
 scratch folder on Hyak (/gscratch/stf/zmcnulty)
 
 
@@ -97,7 +100,7 @@ software. To get one of these, run:
 Once the build node is acquired, there are two main options for installing Python packages.
 
 
-##### Creating a conda environment (recommended for Python)
+#### Creating a conda environment (recommended for Python)
 
 This is only useful if you are using Python exclusively. 
 Conda environments are a lot like Python virtual environments (virtualenv). It is a feature of Anaconda python, so to use
@@ -135,7 +138,7 @@ conda activate /gscratch/group_name/user_name/environment_name
 ```
 
 
-##### Downloading to a separate file and Adjusting PYTHONPATH
+#### Downloading to a separate file and Adjusting PYTHONPATH
 
 The next option is to download the required software/modules to a folder in your scratch directory:
 
@@ -169,10 +172,10 @@ export PYTHONPATH="${PYTHONPATH}:/gscratch/stf/zmcnulty/python_libraries"
 
 Once you download a library, you will not have to do it again. It stays in the scratch folder. However, every time you use a node and
 load python, you will have to add the above path to PYTHONPATH so the new instance of python can find the library binaries. I recommend
-adding the "export PYTHONPATH ..." line to your .bashrc file (in your home directory) so its executed every time you log on to Hyak.
+adding the `export PYTHONPATH ...` line to your .bashrc file (in your home directory) so its executed every time you log on to Hyak.
 
 
-##### Other Software
+#### Other Software
 
 In general, you can download any software, not just python packages, to your gscratch file and compile them from there. Use curl or wget to download
 files off remote servers (from website). The Hyak Wiki has a [tutorial](https://wiki.cac.washington.edu/display/hyakusers/Hyak+Compiling+HDF5+Serial) that
@@ -180,14 +183,16 @@ uses this procedure. To find the address you need to use with wget, you can some
 select "Copy Link Address". This will be the link you need (it often includes /ftp/ in the link). For example, I can download Python 3.7.3
 from the Python website to my working directory using:
 
-```wget https://www.python.org/ftp/python/3.7.3/Python-3.7.3.tgz```
+```
+wget https://www.python.org/ftp/python/3.7.3/Python-3.7.3.tgz
+```
 
 Unzipping this file (`tar -xzf Python-3.7.3.tgz`) you should have a folder. In this folder will be a README file typically with further instructions on how to compile the code.
 
 
 
 
-### Scheduling Jobs
+## Scheduling Jobs
 
 Both Hyak Mox and Ikt use the [Slurm Scheduler](https://slurm.schedmd.com/overview.html) to schedule jobs across the many nodes in Hyak
 in a non-conflicting way. Think back to your database management class and the idea of exclusive and inclusive locks.  
@@ -197,21 +202,21 @@ necessay to use Hyak. The few commands we discuss below will suffice for basic u
 runs off Slurm, this is essentially how jobs will be run on Hyak. Here are a few common commands and their options [here](https://slurm.schedmd.com/pdfs/summary.pdf). Again, this is far more details than the basic Hyak user needs to know. 
 Before we discuss the commands, lets discuss two different types of Jobs.
 
-##### Interactive Mode
+#### Interactive Mode
 
 Interactive mode allows you to run commands one at a time through the terminal. It will essentially be exactly like simply using a terminal, but all the operations you powerful nodes. This is helpful for trying to see if your code can run or has any bugs,
 but should only be used for short and quick runs really as it requires you to be constantly connected to Hyak. If for some reason you lose connection (wifi drops, you close your laptop, etc) your commands will stop running: all the same issues of running stuff on your laptop.
 I use it sometimes to check that my code runs and does not have any bugs. However, if you know your code works and just need to run through the simulation/data analysis, I would recommend using batch mode instead.
 Interactive mode is also what you want to use when you are trying to download software as discussed in the section above. To do this, you will run interactive mode on a build node which we will discuss how to use below.
 
-##### Batch Mode
+#### Batch Mode
 
 Batch mode is what you will use for most heavy-duty computations. It allows you to specify all the commands you want to run in a file and then
 submit the job to run. From there, you do not have to do anything: you can log off hyak, shut off your computer, and everything will still run. Batch mode specifies the operations using something called a
 batch/slurm file. An example of this is given below.
 
 
-###### Running The Jobs : Basic Commands
+#### Running The Jobs : Basic Commands
 
 * sbatch : run a batch job; A batch job is a computer program or set of programs processed in batch mode. This means that a sequence of commands to be executed by the operating system is listed in a file (often called a batch file, command file, or shell script) and submitted for execution as a single unit. 
     * The file containing all the commands to run and specifying information about the number of nodes to use, memory allocation, etc is called the slurm script.
@@ -234,7 +239,7 @@ To cancel a job at any time, just do `scancel job_ID`
 
 
 
-### Backfill
+## Backfill
 
 The backfill is one of the coolest features of Hyak. Essentially, if someone is not using one of their nodes at any given time, you can run your code off it!
 However, this comes with a catch. As soon as that person wants access to their node, you get kicked off. But Hyak can restart your job?
@@ -242,7 +247,7 @@ However, this comes with a catch. As soon as that person wants access to their n
 
 
 
-### Example Batch Script
+## Example Batch Script
 
 More information can be found [here](https://wiki.cac.washington.edu/display/hyakusers/Mox_scheduler) on how to choose these settings and what they all mean.
 The Hyak wiki in general is a good source of information.
