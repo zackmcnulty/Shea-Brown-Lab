@@ -20,8 +20,10 @@ This is what I have been using and it works pretty well.
 
 Just like a remote server, Hyak is accessed through SSH (and it also uses 2-factor verification). When you SSH into Hyak with:
 
-``` ssh -X yourUWnetid@mox.hyak.uw.edu```
-``` ssh -X yourUWnetid@ikt.hyak.uw.edu```
+`ssh -X yourUWnetid@mox.hyak.uw.edu`
+
+
+
 
 you will find yourself in your users home directory. These directories have a small memory capacity (10GB) and are NOT meant to hold any significantly large files.
 Only really store files here that are meant to be completely private like SSH keys or possibly logon scripts. For all data from experiments and what not, these files
@@ -52,17 +54,20 @@ nodes do NOT have access to the internet, so nothing can be downloaded outside H
 While you have a home directory, the directory you start in when you log in, this location has a small memory capacity allocated to it. Beyond private information (i.e. SSH keys, logon scripts, etc)
 most files should be stored instead in your gscratch folder. The location of these directories are:
 
-/gscratch/group_name/user_name
+```/gscratch/group_name/user_name```
+
 
 For me under the STF group, its:
 
-/gscratch/stf/zmcnulty
+```/gscratch/stf/zmcnulty```
 
 This is where all data/code files will be stored for anything you are trying to do on a compute node. Use the scp command (while on a build node) in bash to transfer files locally (or from the Lolo archives?) to this folder
 before running jobs on some of the compute nodes. Think of this as your main workspace for anything you are trying to do on Hyak. Here is an example of how to transfer files with scp. This is run from my local machine (NOT logged onto hyak):
 
+```
 scp -r local_folder/ user_id@mox.hyak.uw.edu:path/to/folder/on/server
 scp -r project/ zmcnulty@mox.hyak.uw.edu:/gscratch/stf/zmcnulty
+```
 
 This copies the entire project/ folder from my local machine (-r stands for recursive; copy folder and all its subfolders, etc) to my
 scratch folder on Hyak (/gscratch/stf/zmcnulty)
@@ -73,9 +78,9 @@ scratch folder on Hyak (/gscratch/stf/zmcnulty)
 
 The modules are different types of software that are avaible on Hyak pre-downloaded (A full list is available [here](https://wiki.cac.washington.edu/display/hyakusers/Hyak+Software)). This software is pre-downloaded, but has to be loaded onto your node before it can be used. Below are some of the commands that can help.
 
-- module avail  :  list all available modules for loading
-- module load <path/to/module>  : load a module; give the path listed by the "module avail" command
-- module list  : list of currently loaded modules (modules ready to be used in future commands)
+- `module avail`  :  list all available modules for loading
+- `module load <path/to/module>`  : load a module; give the path listed by the "module avail" command
+- `module list`  : list of currently loaded modules (modules ready to be used in future commands)
 
 Only modules that are currently loaded can be used. These are a fast way to get large, commonly used software packages. 
 Many of the common coding languages (R, MATLAB, Python, Mathematica) are available here, although you may choose to download them 
@@ -98,21 +103,25 @@ This is only useful if you are using Python exclusively.
 Conda environments are a lot like Python virtual environments (virtualenv). It is a feature of Anaconda python, so to use
 it we must specifically use that python on Hyak. To do so, use:
 
-module load anaconda<python version>
+```module load anaconda<python version>```
 
 To see which versions of anaconda are available, use the module avail command (To filter out non-anaconda stuff use "module avail | grep anaconda").
 Once we have anaconda, we can create a conda environment using:
 
 conda create -n environment_name
 
-This creates a folder "/usr/lusers/user_name/.conda/envs/environment_name" where all your software will be downloaded to. To download software (i.e. Python libraries) we can use the following
+This creates a folder `/usr/lusers/user_name/.conda/envs/environment_name` where all your software will be downloaded to. To download software (i.e. Python libraries) we can use the following
 command:
 
-conda install package_name  (e.g. conda install tensorflow)
+```
+conda install package_name  #(e.g. conda install tensorflow)
+```
 
 However, just like virtualenv you will have to turn on the environment before using any of this software. To do so, use the command:
 
+```
 source activate environment_name
+```
 
 Once the environment is activated, we can use this software like we downloaded it normally with pip (i.e in Python just `import package`).
 You will probably want to use this on a compute node in a batch script rather than in this interactive setting, so be sure to activate the
@@ -120,32 +129,43 @@ conda environment in your batch script (an example of a batch script is below)!
 
 If you are downloading a ton of software packages, consider putting the conda environment in your gscratch folder using:
 
+```
 conda create --prefix /gscratch/group_name/user_name/environment_name
 conda activate /gscratch/group_name/user_name/environment_name
-
+```
 
 
 ##### Downloading to a separate file and Adjusting PYTHONPATH
 
 The next option is to download the required software/modules to a folder in your scratch directory:
 
+```
 /gscratch/group_name/user_id   --> /gscratch/stf/zmcnulty (for me)
+```
 
 If you are not using Python, you can skip to the lower part of this section where I give more general instructions. Using pip, we can download python modules to locations other than the general site-packages folder. First, use the `module load` command
 to get access to a pre-installed version of python on Hyak (intel-python3_2017 is recommended).
 
-- module load intel-python3_2017   
+```
+module load intel-python3_2017   
+```
 
 Then, we can use pip to download to a specific directory with the `--target` option. Here, we download them to a folder called "python_libraries":
 
-- pip install --ignore-installed --target=/gscratch/group_name/user_name/python_libraries/ package_name  
+```
+pip install --ignore-installed --target=/gscratch/group_name/user_name/python_libraries/ package_name  
 
+```
 As an example, for my user on the STF account I use:
-- pip install --ignore-installed --target=/gscratch/stf/zmcnulty/python_libraries/ package_name  
+```
+pip install --ignore-installed --target=/gscratch/stf/zmcnulty/python_libraries/ package_name  
+```
 
 To allow Python to find this folder and the modules in it, we must added the folder path to the PYTHONPATH environment variable:
 
-- export PYTHONPATH="${PYTHONPATH}:/gscratch/stf/zmcnulty/python_libraries"  
+```
+export PYTHONPATH="${PYTHONPATH}:/gscratch/stf/zmcnulty/python_libraries"  
+```
 
 Once you download a library, you will not have to do it again. It stays in the scratch folder. However, every time you use a node and
 load python, you will have to add the above path to PYTHONPATH so the new instance of python can find the library binaries. I recommend
@@ -162,7 +182,7 @@ from the Python website to my working directory using:
 
 ```wget https://www.python.org/ftp/python/3.7.3/Python-3.7.3.tgz```
 
-Unzipping this file (tar -xzf Python-3.7.3.tgz) you should have a folder. In this folder will be a README file typically with further instructions on how to compile the code.
+Unzipping this file (`tar -xzf Python-3.7.3.tgz`) you should have a folder. In this folder will be a README file typically with further instructions on how to compile the code.
 
 
 
@@ -195,10 +215,10 @@ batch/slurm file. An example of this is given below.
 
 * sbatch : run a batch job; A batch job is a computer program or set of programs processed in batch mode. This means that a sequence of commands to be executed by the operating system is listed in a file (often called a batch file, command file, or shell script) and submitted for execution as a single unit. 
     * The file containing all the commands to run and specifying information about the number of nodes to use, memory allocation, etc is called the slurm script.
-    * usage: sbatch <batch file>   (e.g. sbatch myscript.slurm)
+    * usage: `sbatch <batch file>`   (e.g. sbatch myscript.slurm)
 
 * srun : run a job in interactive mode. Rather than specifying all commands in a slurm script for a batch job, you type the commands one by one in the console
-    * usage: srun -N num_nodes -A group_name -p partition_name --time=2:00:00 --mem=20G --pty /bin/bash
+    * usage: `srun -N num_nodes -A group_name -p partition_name --time=2:00:00 --mem=20G --pty /bin/bash`
     * Here, the group name is the group whose nodes you are running on (i.e. STF for the student tech fund) and the partition name is? (i.e. build, group_name, stf-int, ...)
     * Mostly, the "build" partition is used because it can connect to outside hyak. Thus, its useful for using git, transferring files to/from Hyak, and installing software packages (like a Python Library).
     * interactive mode is NOT advisable for large jobs.
