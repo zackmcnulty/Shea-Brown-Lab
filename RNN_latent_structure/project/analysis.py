@@ -153,11 +153,6 @@ if not args.no_demean:
     rnn_representation -= rnn_mean
     cnn_representation -= cnn_mean
 
-#p(cnn_mean.shape)
-#p(rnn_mean.shape)
-
-#p(rnn_representation.shape)
-#p(cnn_representation.shape)
 
 # ========================================================================================================================
 # RUN SVD and plot the singular values
@@ -444,8 +439,8 @@ if args.positional_activity:
     import get_trajectory
 
     # RNN Positional Activities
-    #neuron_nums=list(range(64))
-    neuron_nums=[]
+    neuron_nums=list(range(64))
+    #neuron_nums=[]
     for neuron in neuron_nums:
 
         plt.figure()
@@ -471,7 +466,8 @@ if args.positional_activity:
 
 
     # CNN Positional Activities
-    neuron_nums = []
+    #neuron_nums = []
+    neuron_nums=list(range(64))
     for neuron in neuron_nums:
 
         plt.figure()
@@ -496,7 +492,7 @@ if args.positional_activity:
 
 
     # RNN radial Activities
-    neuron_nums=list(range(64))
+    neuron_nums=list(range(13,64))
     for neuron in neuron_nums:
 
         plt.figure()

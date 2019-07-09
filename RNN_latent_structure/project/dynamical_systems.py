@@ -37,7 +37,7 @@ def f_vert_spring(initial_condition = [0,0,1], mass = 1, k = 1):
     return [lambda t, x: [dxdt(x), dydt(x), dvdt(x)], initial_condition]
 
 
-def f_both_spring(initial_condition = [0,0,1], mass = 1, k1 = 1, k2=1): 
+def f_both_spring(initial_condition = [0,0,1], mass = 1, k1 = 1, k2=1, center=(0,0)): 
     ''' spring-mass system oscillating vertically AND horizontally centered at x,y = 0'''
 
     if len(initial_condition) != 4:
@@ -51,8 +51,9 @@ def f_both_spring(initial_condition = [0,0,1], mass = 1, k1 = 1, k2=1):
 
     return [lambda t, x: [dxdt(x), dydt(x), dvx_dt(x), dvy_dt(x)], initial_condition]
 
-def f_angled_spring(initial_condition = [0,0,1], theta=0, mass = 1, k = 1): 
-    ''' spring-mass system oscillating in a line theta radians above horizontal centered at x,y = 0'''
+# dynamical system for a spring oscillating along an axis at angle theta centered at the given initial condition
+def f_angled_spring(initial_condition = [0,0,1], theta=0, mass = 1, k = 1, center=(0,0)): 
+    ''' spring-mass system oscillating in a line theta radians above horizontal centered at x,y = center'''
 
     if len(initial_condition) != 3:
         raise ValueError('The angled spring mass system expects three intial conditions: x,y, and velocity')
@@ -60,6 +61,12 @@ def f_angled_spring(initial_condition = [0,0,1], theta=0, mass = 1, k = 1):
     # x[0] = x position, x[1] = y position, x[2] = velocity
     dxdt = lambda x:  x[2] * np.cos(theta)
     dydt = lambda x:  x[2] * np.sin(theta)
-    dv_dt = lambda x: -k/mass * np.sqrt(x[0]**2 + x[1]**2) * (2*(np.sign(np.sin(theta)) == np.sign(x[1])) - 1)
+    dv_dt = lambda x: -k/mass * np.sqrt((x[0] - center[0])**2 + (x[1] - center[1])**2) * (2*(np.sign(np.sin(theta)) == np.sign(x[1])) - 1)
 
     return [lambda t, x: [dxdt(x), dydt(x), dv_dt(x)], initial_condition]
+
+# stationary object
+def f_stationary(initial_condition = [0,0]):
+
+    return [lambda t, x: [0, 0], initial_condition]
+

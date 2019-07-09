@@ -5,7 +5,7 @@ import time
 import dynamical_systems as ds
 
 
-def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None):
+def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None, return_all=False, num_params=4, normalize_together=True):
     '''
     Calculates trajectories of the given objects and their specified dynamics throughout the system.
     Normalizes all trajectories so they lie in the grid [0,1] x [0, 1] for convenient plotting
@@ -18,6 +18,9 @@ def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None):
     tspan: length of time to simulate system for
     tstep: time step size for numerical integration
     num_steps: number of steps to use for numerical integration; ignored if tstep is specified
+    return_all = give back all parameters if true (i.e. velocity) rather than just the (x,y) pairs
+    num_params = number of parameters to return
+    normalize_together = normalize the x and y coordinates over time together to avoid distorting the motion
     '''
 
     if tstep == None:
@@ -26,13 +29,13 @@ def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None):
         t_vals = np.arange(tspan[0], tspan[1] + tstep, tstep)
 
     # x or y, object #, time
-    all_y_vals = np.zeros((2, len(objects), len(t_vals)))
+    all_y_vals = np.zeros((num_params, len(objects), len(t_vals)))
 
     for i, (f, y0) in enumerate(objects):
         sol = scipy.integrate.solve_ivp(f, tspan, y0, t_eval = t_vals)
 
-        all_y_vals[0, i, :] = sol.y[0]
-        all_y_vals[1, i, :] = sol.y[1]
+        for j in range(len(sol.y)):
+            all_y_vals[j, i, :] = sol.y[j]
 
     '''
     # Normalize each objects trajectory separately
@@ -61,34 +64,37 @@ def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None):
     ymin = np.amin(all_y_vals[1, :, :])
 
     # TODO: the x and Y values should be normalized together. This avoids distorting the motion in any given direction
-
-    all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
-    all_y_vals[1, :, :] = (all_y_vals[1, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
+    if normalize_together:
+        all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
+        all_y_vals[1, :, :] = (all_y_vals[1, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
 
     # Normalize x, y separately.
-    '''
-    if xmax != xmin:
-        all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - xmin) / (xmax - xmin)
-
-    else: # in case the motion is fixed to avoid division by zero
-        all_y_vals[0, :, :] = 0.5
-
-    if ymax != ymin:
-        all_y_vals[1, :, :] = (all_y_vals[1,:,:] - ymin) / (ymax - ymin)
     else:
-        all_y_vals[1, :, :] = 0.5
-    '''
+        if xmax != xmin:
+            all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - xmin) / (xmax - xmin)
+
+        else: # in case the motion is fixed to avoid division by zero
+            all_y_vals[0, :, :] = 0.5
+
+        if ymax != ymin:
+            all_y_vals[1, :, :] = (all_y_vals[1,:,:] - ymin) / (ymax - ymin)
+        else:
+            all_y_vals[1, :, :] = 0.5
 
     # tvals, x values, y values    where both x/y values are in the form  
     # [ object 1 x values
     #   object 2 x values
-    return (t_vals, all_y_vals[0, :, :], all_y_vals[1, :, :])
+    if return_all:
+        return (t_vals, all_y_vals)
+    else:
+        return (t_vals, all_y_vals[0, :, :], all_y_vals[1, :, :])
 
 
 # Plot objects moving throughout system ========================================================
 def run_example():
     ''' Plots an example of the output of this code'''
     #objects = [ds.f_horz_spring(initial_condition = [1,0,1]), \
+
     #        ds.f_vert_spring(mass=5,k=1, initial_condition=[2,0,2]), \
     #        ds.f_horz_spring(initial_condition = [1,0,1])]
 

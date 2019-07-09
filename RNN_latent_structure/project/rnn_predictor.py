@@ -47,7 +47,7 @@ for encoding/decoding.
 # ConvLSTM2D: reccurrent neural network (LSTM) that is applied convolutionally
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D, SimpleRNN, Reshape, ZeroPadding2D, Cropping2D, TimeDistributed, Flatten, ConvLSTM2D
 from keras.models import Model, Sequential, load_model
-from keras import regularizers
+from keras import regularizers, initializers
 from keras import backend as K
 import os
 import sys
@@ -220,6 +220,7 @@ else:
                   return_sequences = True,
                   activation = 'tanh',
                   recurrent_regularizer=regularizers.l1(l1),
+                  recurrent_initializer=initializers.Identity(),
                   name='rnn'))
     # NOTE: since the RNN changes size of output of the final Conv2D layer in encoding section, we somehow have
     #       to map the dimension back down. This is what the Dense layer below does

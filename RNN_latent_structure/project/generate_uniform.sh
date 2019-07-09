@@ -7,11 +7,11 @@
 # ./generate_uniform.sh
 
 
-start_angle=160
-stop_angle=200
-num_movies=40
+start_angle=0
+stop_angle=360
+num_movies=180
 # number of movies to make with angles uniformly between [start, stop]
-folder="left_right" # foldername in ./test_movies to save movies
+folder="uniform" # foldername in ./test_movies to save movies
 
 
 

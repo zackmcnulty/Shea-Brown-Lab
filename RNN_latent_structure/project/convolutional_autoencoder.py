@@ -54,7 +54,7 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', default=50, type=int)
 parser.add_argument('--batch_size', default=128, type=int)
-parser.add_argument('--name', default='conv_autoencoder_LSTM_BCE')
+parser.add_argument('--name')
 parser.add_argument('--load') # specify a file to load
 parser.add_argument('--l1', default=0, type=float, help='l1 penalization on kernels of convolutional layers') # specify a file to load
 args = parser.parse_args()
@@ -68,7 +68,9 @@ num_results_shown = 10 # number of reconstructed frames vs original to show on t
 # Save the Keras model
 if args.load is not None and args.name is None:
     model_filename = Path(args.load)
+
 else:
+    if args.name is None: model_name = 'conv_autoencoder'
     model_filename = Path(model_name + "_l1_" + str(l1) + ".h5")
     model_filename = 'models' / model_filename 
 

@@ -108,7 +108,7 @@ model.add(UpSampling2D((2,2)))
 # want to use sigmoid as our final activation function to make the output more
 model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same'))
 
-model.compile(optimizer = 'adadelta', loss='binary_crossentropy')
+model.compile(optimizer = 'adadelta', loss='mean_squared_error')
 #===============================================================================`
 
 # Load the data again!
@@ -147,7 +147,7 @@ if not use_sequential:
     predicted_images = autoencoder.predict(x_test)
 else:
     model.fit(x_train, x_train,
-              epochs = 50, 
+              epochs = 1, 
               batch_size = 128, 
               shuffle = True,
               validation_data = (x_test, x_test),

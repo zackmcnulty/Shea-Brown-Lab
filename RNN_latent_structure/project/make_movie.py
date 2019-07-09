@@ -41,7 +41,11 @@ parser.add_argument('--folder', default='./movie_files')
 parser.add_argument('-train', action='store_true', help='add to training dataset')
 parser.add_argument('-p_test', type=float, help='percent of [0, 2pi] to allocate to testing dataset') 
 parser.add_argument('--theta', type=float, help='angle of oscillation for movie')
+parser.add_argument('--ic', nargs=2, help='initial condition of object for spring-mass [x,y]')
 args = parser.parse_args()
+
+if args.ic is not None:
+    args.ic = [float(i) for i in args.ic]
 
 # each object will be specified by (motion = (dynamics, initial_condition), shape)
 # Shapes will be specified as graphics objects
@@ -68,12 +72,21 @@ if args.random: # ... for generating large batches of movies; uses .sh script
 
     objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=theta), )  
     shapes =  (Rectangle(Point(-3,-3), Point(3,3)), )
-    fill_colors = ['black']
+    fill_colors = ['black'] 
     outline_colors = ['black']
 
 
+# generate movies with spring oscillating at the given angle through a specified point in the plane
+elif args.theta is not None and args.ic is not None:
+    #objects = (ds.f_stationary(initial_condition=[0,0]), ds.f_stationary(initial_condition=[1,1]), ds.f_angled_spring(initial_condition=args.ic, theta=args.theta, center=args.ic[:2]) )  
+    x_frame = 1 * args.ic[0]
+    y_frame = -1 * args.ic[1]
+    objects = (ds.f_stationary(initial_condition=[x_frame, y_frame]), ds.f_stationary(initial_condition=[x_frame + 1,y_frame+1]), ds.f_angled_spring(initial_condition=[0,0,1], theta=args.theta) )  
+    shapes =  (Point(0,0), Point(1,1), Rectangle(Point(-3,-3), Point(3,3)) )
+    fill_colors = ['white', 'white', 'black']
+    outline_colors = ['white', 'white', 'black']
 
-# generate movies with angles uniformly distributed along some range.
+# generate movies with a spring oscillating at the given angle through origin
 elif args.theta is not None:
     
     # convert angle given in degrees to radians
@@ -109,8 +122,8 @@ if len(objects) != len(shapes) or len(objects) != len(fill_colors) or len(object
      
 
 # Number of frames to generate for the movie and the frames per second for the movie respectively.
-num_frames = 35
-movie_fps = 5
+num_frames = 100 # affects the dt
+movie_fps = 10 # does not really matter; only affects frame rate for video but not which frames are generated
 
 # Specify properties of the graphics window; Below allows you to control the size in pixels of
 # the window (and hence the resolution in the video)
@@ -206,7 +219,7 @@ for i, shape in enumerate(shapes):
     shape.setFill(fill_color)
     shape.setOutline(outline_color)
 
-    save_frame(win, 1)
+save_frame(win, 1)
 
 
 for frame in range(1, len(t_vals)):
