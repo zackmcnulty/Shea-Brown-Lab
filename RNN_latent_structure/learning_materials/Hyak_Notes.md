@@ -117,6 +117,7 @@ command:
 conda install package_name  #(e.g. conda install tensorflow)
 ```
 
+If the package fails to download, it is possible you do not have the proper channels for anaconda. Look on this [website](https://anaconda.org/) to find a proper channel.
 However, just like virtualenv you will have to turn on the environment before using any of this software. To do so, use the command:
 
 ```
