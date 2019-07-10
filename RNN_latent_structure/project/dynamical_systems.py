@@ -70,3 +70,20 @@ def f_stationary(initial_condition = [0,0]):
 
     return [lambda t, x: [0, 0], initial_condition]
 
+
+# Spring oscillating between two points
+def f_two_point_spring(p1=(0,0), p2=(1,1), v_init=1, k=1):
+	center_x = (p1[0] + p2[0]) / 2
+	center_y = (p1[1] + p2[1]) / 2
+
+	initial_condition = [center_x, center_y, v_init]
+	max_displacement_squared = (p1[0] - center_x)**2 + (p1[0] - center_y)**2
+	m = k * max_displacement_squared / (v_init ** 2)
+
+	# starts heading towards p2
+	theta = np.arctan2(p2[1] - center_y, p2[0] - center_x)
+	
+	return f_angled_spring(initial_condition=initial_condition, theta=theta, mass=m, k=k, center=(center_x, center_y))
+	
+
+

@@ -41,11 +41,8 @@ parser.add_argument('--folder', default='./movie_files')
 parser.add_argument('-train', action='store_true', help='add to training dataset')
 parser.add_argument('-p_test', type=float, help='percent of [0, 2pi] to allocate to testing dataset') 
 parser.add_argument('--theta', type=float, help='angle of oscillation for movie')
-parser.add_argument('--ic', nargs=2, help='initial condition of object for spring-mass [x,y]')
 args = parser.parse_args()
 
-if args.ic is not None:
-    args.ic = [float(i) for i in args.ic]
 
 # each object will be specified by (motion = (dynamics, initial_condition), shape)
 # Shapes will be specified as graphics objects
@@ -75,16 +72,6 @@ if args.random: # ... for generating large batches of movies; uses .sh script
     fill_colors = ['black'] 
     outline_colors = ['black']
 
-
-# generate movies with spring oscillating at the given angle through a specified point in the plane
-elif args.theta is not None and args.ic is not None:
-    #objects = (ds.f_stationary(initial_condition=[0,0]), ds.f_stationary(initial_condition=[1,1]), ds.f_angled_spring(initial_condition=args.ic, theta=args.theta, center=args.ic[:2]) )  
-    x_frame = 1 * args.ic[0]
-    y_frame = -1 * args.ic[1]
-    objects = (ds.f_stationary(initial_condition=[x_frame, y_frame]), ds.f_stationary(initial_condition=[x_frame + 1,y_frame+1]), ds.f_angled_spring(initial_condition=[0,0,1], theta=args.theta) )  
-    shapes =  (Point(0,0), Point(1,1), Rectangle(Point(-3,-3), Point(3,3)) )
-    fill_colors = ['white', 'white', 'black']
-    outline_colors = ['white', 'white', 'black']
 
 # generate movies with a spring oscillating at the given angle through origin
 elif args.theta is not None:
