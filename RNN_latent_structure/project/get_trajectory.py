@@ -57,29 +57,30 @@ def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None, ret
             all_y_vals[1, i, :] = 0.5
     '''
 
-    # Normalize all objects motion together.
-    xmax = np.amax(all_y_vals[0, :, :])
-    xmin = np.amin(all_y_vals[0, :, :])
-    ymax = np.amax(all_y_vals[1, :, :])
-    ymin = np.amin(all_y_vals[1, :, :])
+    if not no_normalization:
+        # Normalize all objects motion together.
+        xmax = np.amax(all_y_vals[0, :, :])
+        xmin = np.amin(all_y_vals[0, :, :])
+        ymax = np.amax(all_y_vals[1, :, :])
+        ymin = np.amin(all_y_vals[1, :, :])
 
-    # TODO: the x and Y values should be normalized together. This avoids distorting the motion in any given direction
-    if normalize_together:
-        all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
-        all_y_vals[1, :, :] = (all_y_vals[1, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
+        # TODO: the x and Y values should be normalized together. This avoids distorting the motion in any given direction
+        if normalize_together:
+            all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
+            all_y_vals[1, :, :] = (all_y_vals[1, : ,:] - min(xmin, ymin)) / (max(xmax,ymax) - min(xmin, ymin))
 
-    # Normalize x, y separately.
-    else:
-        if xmax != xmin:
-            all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - xmin) / (xmax - xmin)
-
-        else: # in case the motion is fixed to avoid division by zero
-            all_y_vals[0, :, :] = 0.5
-
-        if ymax != ymin:
-            all_y_vals[1, :, :] = (all_y_vals[1,:,:] - ymin) / (ymax - ymin)
+        # Normalize x, y separately.
         else:
-            all_y_vals[1, :, :] = 0.5
+            if xmax != xmin:
+                all_y_vals[0, :, :] = (all_y_vals[0, : ,:] - xmin) / (xmax - xmin)
+
+            else: # in case the motion is fixed to avoid division by zero
+                all_y_vals[0, :, :] = 0.5
+
+            if ymax != ymin:
+                all_y_vals[1, :, :] = (all_y_vals[1,:,:] - ymin) / (ymax - ymin)
+            else:
+                all_y_vals[1, :, :] = 0.5
 
     # tvals, x values, y values    where both x/y values are in the form  
     # [ object 1 x values
