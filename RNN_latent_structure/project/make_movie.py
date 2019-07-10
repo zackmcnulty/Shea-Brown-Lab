@@ -35,12 +35,15 @@ from pathlib import Path
 # Define objects and their motion  ==============================================================================================
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-random', action='store_true')
-parser.add_argument('-name', required=True)
+parser.add_argument('--random', action='store_true', help='generate movies with mass oscillating through center at random angle')
+parser.add_argument('--random_points', action='store_true', help='generate movies with mass oscillating through at random angle about a random center')
+parser.add_argument('--name', required=True)
 parser.add_argument('--folder', default='./movie_files')
-parser.add_argument('-train', action='store_true', help='add to training dataset')
-parser.add_argument('-p_test', type=float, help='percent of [0, 2pi] to allocate to testing dataset') 
+parser.add_argument('--train', action='store_true', help='add to training dataset')
+parser.add_argument('--p_test', type=float, help='percent of [0, 2pi] to allocate to testing dataset') 
 parser.add_argument('--theta', type=float, help='angle of oscillation for movie')
+parser.add_argument('--points', type=float, nargs=4,  help='Two points that the mass will oscillate between')
+
 args = parser.parse_args()
 
 
@@ -48,6 +51,29 @@ args = parser.parse_args()
 # Shapes will be specified as graphics objects
 # NOTE: The depth of objects in the image is specified by the order they appear in "objects" below.
 #       Shapes earlier in "objects" appear deeper in the image
+
+
+# randomly choose 2 points for the spring/mass to oscillate between.
+# modify args.points and just use code below
+if args.random_points:
+
+     # randomly choose a first point
+     p1 = np.random.uniform(low=0,high=1, size=2)
+    
+    # randomly choose an angle
+    args.p_test = args.p_test / 2
+    low_train = np.pi * args.p_test
+    high_train = np.pi - low_train
+    low_test = -1 * low_train
+    high_test = low_train
+
+    if args.train:
+        theta = np.random.uniform(low=low_train, high=high_train)
+    else:
+        theta = np.random.uniform(low=low_test, high=high_test)
+
+    # TODO: randomly choose the second point along the ray starting at p1 in the direction of theta.
+
 
 
 
@@ -85,6 +111,19 @@ elif args.theta is not None:
     outline_colors = ['black']
 
 
+# Generate movies with a spring oscillating between two specific points.
+elif args.points is not None:
+    v_init = 2
+    k = 1
+
+    top_corner = [0,0]
+    bottom_corner = [1,1]
+    objects = (ds.f_two_point_spring(p1=args.points[:2], p2=args.points[2:], v_init=v_init, k=k), ds.f_stationary(top_corner), ds.f_stationary(bottom_corner))  
+    shapes =  (Rectangle(Point(-3,-3), Point(3,3)), Point(top_corner[0], top_corner[1]), Point(bottom_corner[0], bottom_corner[1]))
+    fill_colors = ['black', 'black', 'black']
+    outline_colors = ['black', 'black', 'black']
+
+
 else: # specify the objects in this program 
     objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=np.pi/4 ), )  
 
@@ -110,7 +149,10 @@ if len(objects) != len(shapes) or len(objects) != len(fill_colors) or len(object
 
 # Number of frames to generate for the movie and the frames per second for the movie respectively.
 num_frames = 100 # affects the dt
-movie_fps = 10 # does not really matter; only affects frame rate for video but not which frames are generated
+tmax = 3 # number of seconds to simulate for. NOT same as length of movie
+movie_fps = num_frames / tmax # does not really matter; only affects frame rate for video but not which frames are generated
+
+# dt = tmax / num_frames
 
 # Specify properties of the graphics window; Below allows you to control the size in pixels of
 # the window (and hence the resolution in the video)
@@ -179,7 +221,7 @@ os.system("mkdir tmp_frames/")
 
 
 # Calculate object trajectories
-(t_vals, x_vals, y_vals) = get_trajectory.get_trajectories(objects, num_steps=num_frames)
+(t_vals, x_vals, y_vals) = get_trajectory.get_trajectories(objects, num_steps=num_frames, tspan=[0, tmax])
 
 win = GraphWin( width = win_width + 2*padding, height=win_height + 2*padding)
 
@@ -222,7 +264,7 @@ for frame in range(1, len(t_vals)):
 
 
 # Convert all these frames into a movie
-os.system("ffmpeg -r {:d} -i ./tmp_images/frame%05d.png -vcodec mpeg4 -y {:s}".format(movie_fps, str(full_path.absolute())))
+os.system("ffmpeg -r {:f} -i ./tmp_images/frame%05d.png -vcodec mpeg4 -y {:s}".format(movie_fps, str(full_path.absolute())))
 
 # delete the temporary folders created
 os.system('rm -rf tmp_images')

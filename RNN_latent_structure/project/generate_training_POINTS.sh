@@ -28,6 +28,7 @@ do
        python3 make_movie.py --name $filename --random --train --p_test $percent_test	
 done
 
+# generate testing movies
 for i in $( seq $num_test_movies)
 do
        filename=`printf test%04d $i`

@@ -61,9 +61,9 @@ def f_angled_spring(initial_condition = [0,0,1], theta=0, mass = 1, k = 1, cente
     # x[0] = x position, x[1] = y position, x[2] = velocity
     dxdt = lambda x:  x[2] * np.cos(theta)
     dydt = lambda x:  x[2] * np.sin(theta)
-    dv_dt = lambda x: -k/mass * np.sqrt((x[0] - center[0])**2 + (x[1] - center[1])**2) * (2*(np.sign(np.sin(theta)) == np.sign(x[1])) - 1)
+    dvdt = lambda x: -k/mass * np.sqrt((x[0] - center[0])**2 + (x[1] - center[1])**2) * (2*(np.sign(np.sin(theta)) == np.sign(x[1] - center[1])) - 1)
 
-    return [lambda t, x: [dxdt(x), dydt(x), dv_dt(x)], initial_condition]
+    return [lambda t, x: [dxdt(x), dydt(x), dvdt(x)], initial_condition]
 
 # stationary object
 def f_stationary(initial_condition = [0,0]):
@@ -77,7 +77,7 @@ def f_two_point_spring(p1=(0,0), p2=(1,1), v_init=1, k=1):
 	center_y = (p1[1] + p2[1]) / 2
 
 	initial_condition = [center_x, center_y, v_init]
-	max_displacement_squared = (p1[0] - center_x)**2 + (p1[0] - center_y)**2
+	max_displacement_squared = (p1[0] - center_x)**2 + (p1[1] - center_y)**2
 	m = k * max_displacement_squared / (v_init ** 2)
 
 	# starts heading towards p2

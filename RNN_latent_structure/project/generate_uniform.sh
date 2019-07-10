@@ -25,7 +25,7 @@ for i in $( seq $num_movies)
 do
 	angle=$(($start_angle + $(($i * $step_size))))
        filename=`printf uniform%03d $angle`
-       python3 make_movie.py -name $filename --theta $angle --folder "./test_movies/$folder"
+       python3 make_movie.py --name $filename --theta $angle --folder "./test_movies/$folder"
 
        # add the given label to the labels file
        printf $angle >> "./test_movies/$folder/labels.csv"

@@ -23,6 +23,8 @@ import pandas as pd
 from pydmd import DMD
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.cm as cm
+import dynamical_systems as ds
+import get_trajectory
 
 
 
@@ -36,13 +38,14 @@ def p(x):
 # note now we are not going to vectorize our data because we care about the local structure
 # instead, input will be fed in as matrices (i.e. frame by frame)
 parser = argparse.ArgumentParser()
-parser.add_argument('-load', help='file name for a previously trained RNN that you wish to train further.', required=True) # specify a full pre-trained RNN model to load
-parser.add_argument('-movie_folder', help='path to folder with movie files to perform analysis on',required=True)
+parser.add_argument('--load', help='file name for a previously trained RNN that you wish to train further.', required=True) # specify a full pre-trained RNN model to load
+parser.add_argument('--movie_folder', help='path to folder with movie files to perform analysis on',required=True)
 parser.add_argument('--svm', action='store_true')
 parser.add_argument('--svd', action='store_true')
 parser.add_argument('--positional_activity', action='store_true')
 parser.add_argument('--uniform', action='store_true')
 parser.add_argument('--pca', action='store_true')
+parser.add_argument('--velocity_tuning', action='store_true')
 parser.add_argument('--isomap', type=int)
 parser.add_argument('--no_demean', action='store_true', default=False,  help='flag to not demean the rnn/cnn neuron representations')
 args = parser.parse_args()
@@ -435,8 +438,6 @@ if args.uniform:
 # Plot activity with respect to position
 if args.positional_activity:
 
-    import dynamical_systems as ds
-    import get_trajectory
 
     # RNN Positional Activities
     neuron_nums=list(range(64))
@@ -550,5 +551,62 @@ if args.positional_activity:
         plt.xlabel('theta')
         plt.ylabel('radius')
         plt.title('CNN Neuron {}'.format(neuron + 1))
-        plt.savefig('analysis_plots/positional_activity/cnn_radial_neuron_{:02}.png'.format(neuron + 1))
+        plt.savefig('analysis_plots/positional_activity/cnn_velocity_neuron_{:02}.png'.format(neuron + 1))
 #        plt.show()
+
+
+# Plot tuning curve for activity vs velocity
+if args.velocity_tuning:
+
+    # RNN Velocity Tuning
+    neuron_nums=list(range(64))
+    for neuron in neuron_nums:
+
+        plt.figure()
+        
+        for i in range(num_movies):
+            # First entry in all_parameter_vals is the parameter number: 
+            next_theta = np.pi * float(labels[i]) / 180.0
+            objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=next_theta), )
+            (t_vals, all_parameter_vals) = get_trajectory.get_trajectories(objects, num_steps=num_frames, return_all=True, num_params=3)
+
+            for j in range(num_frames):
+                rnn_activity = rnn_representation[i, j, neuron]
+                v = all_parameter_vals[2,0, j]
+
+                plt.plot([v], [rnn_activity], 'ro', markersize=5)
+
+
+        plt.xlabel('velocity')
+        plt.ylabel('activity')
+        plt.title('RNN Neuron {}'.format(neuron + 1))
+        plt.savefig('analysis_plots/velocity_tuning/rnn_velocity_neuron_{:02}.png'.format(neuron + 1))
+        plt.show()
+
+
+    # CNN Velocity Tuning
+    neuron_nums=list(range(64))
+    for neuron in neuron_nums:
+
+        plt.figure()
+        cmap = plt.get_cmap('plasma')
+        
+        for i in range(num_movies):
+            # First entry in all_parameter_vals is the parameter number: 
+            next_theta = np.pi * float(labels[i]) / 180.0
+            objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=next_theta), )
+            (t_vals, all_parameter_vals) = get_trajectory.get_trajectories(objects, num_steps=num_frames, return_all=True, num_params=3)
+
+            for j in range(num_frames):
+                cnn_activity = cnn_representation[i, j, neuron]
+                v = all_parameter_vals[2,0, j]
+
+                plt.plot([v], [cnn_activity], 'ro', markersize=5)
+
+
+        plt.xlabel('velocity')
+        plt.ylabel('activity')
+        plt.title('CNN Neuron {}'.format(neuron + 1))
+        plt.savefig('analysis_plots/velocity_tuning/cnn_radial_neuron_{:02}.png'.format(neuron + 1))
+        plt.show()
+

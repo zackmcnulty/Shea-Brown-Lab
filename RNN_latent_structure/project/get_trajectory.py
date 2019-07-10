@@ -5,7 +5,7 @@ import time
 import dynamical_systems as ds
 
 
-def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None, return_all=False, num_params=4, normalize_together=True):
+def get_trajectories(objects, tspan=(0, 10), num_steps = 1000, tstep = None, return_all=False, num_params=4, normalize_together=True, no_normalization=False):
     '''
     Calculates trajectories of the given objects and their specified dynamics throughout the system.
     Normalizes all trajectories so they lie in the grid [0,1] x [0, 1] for convenient plotting
