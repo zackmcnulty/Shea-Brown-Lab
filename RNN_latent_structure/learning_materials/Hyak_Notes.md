@@ -81,6 +81,7 @@ The modules are different types of software that are avaible on Hyak pre-downloa
 - `module avail`  :  list all available modules for loading
 - `module load <path/to/module>`  : load a module; give the path listed by the "module avail" command
 - `module list`  : list of currently loaded modules (modules ready to be used in future commands)
+- `module help <path/to/module>` : prints information about the module (i.e. what it contains, further instructions on how to activate module, etc).
 
 Only modules that are currently loaded can be used. These are a fast way to get large, commonly used software packages. 
 Many of the common coding languages (R, MATLAB, Python, Mathematica) are available here, although you may choose to download them 
