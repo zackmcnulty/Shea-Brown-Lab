@@ -20,17 +20,18 @@
 num_train_movies=250
 num_test_movies=50
 percent_test=0.2
+folder="movie_files"
 
 # generate training movies
 for i in $( seq $num_train_movies)
 do
        filename=`printf train%04d $i`
-       python3 make_movie.py --name $filename --random --train --p_test $percent_test	
+       python3 make_movie.py --name $filename --folder $folder --random_points --train --p_test $percent_test	
 done
 
 # generate testing movies
 for i in $( seq $num_test_movies)
 do
        filename=`printf test%04d $i`
-       python3 make_movie.py --name $filename --random --p_test $percent_test	
+       python3 make_movie.py --name $filename --folder $folder --random_points --p_test $percent_test	
 done

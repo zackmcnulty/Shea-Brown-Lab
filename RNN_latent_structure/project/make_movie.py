@@ -57,8 +57,6 @@ args = parser.parse_args()
 # modify args.points and just use code below
 if args.random_points:
 
-     # randomly choose a first point
-     p1 = np.random.uniform(low=0,high=1, size=2)
     
     # randomly choose an angle
     args.p_test = args.p_test / 2
@@ -67,13 +65,48 @@ if args.random_points:
     low_test = -1 * low_train
     high_test = low_train
 
-    if args.train:
-        theta = np.random.uniform(low=low_train, high=high_train)
-    else:
-        theta = np.random.uniform(low=low_test, high=high_test)
 
-    # TODO: randomly choose the second point along the ray starting at p1 in the direction of theta.
+    
+    # depending on where the two points are chosen to be, its possible the oscillation
+    # occurs over a very short distance. By setting a threshold, we reroll situations where
+    # the block would barely move.
+    threshold = 0.1 
+    max_dist = 0
+    while max_dist < threshold:
+        # randomly choose a first point
+        #p1 = np.random.uniform(low=0,high=1, size=2)
+        p1 = np.mean(np.random.uniform(low=0, high=1, size=(2,5)), axis=1) # instead of just uniform, take the mean of uniform to get a guassian ish distribution that is still bounded by [0,1]
 
+        # randomly choose an angle of oscillation
+        if args.train: # if movie is for training sample
+            theta = np.random.uniform(low=low_train, high=high_train)
+        else: # movie is for testing sample
+            theta = np.random.uniform(low=low_test, high=high_test)
+
+        # randomly choose the second point along the ray starting at p1 in the direction of theta.
+        if theta > np.pi / 2 and theta < 3*np.pi / 2:
+            x_dist = np.abs(p1[0] / np.cos(theta))
+        else:
+            x_dist = np.abs((1-p1[0]) / np.cos(theta))
+
+        if theta < np.pi:
+            y_dist = np.abs((1-p1[1]) / np.sin(theta))
+        else:
+            y_dist = np.abs(p1[1] / np.sin(theta))
+
+        max_dist = min(x_dist, y_dist)
+
+    # Give a distribution that favors longer oscillations
+    min_dist = np.sqrt(threshold/max_dist)
+    dist = max_dist * (np.random.uniform(low=min_dist, high=1)) ** 0.5
+
+
+    p2 =[p1[0] + dist * np.cos(theta), p1[1] + dist * np.sin(theta)]
+
+    args.points = [0,0,0,0]
+    args.points[:2] = p1
+    args.points[2:] = p2
+    
 
 
 
@@ -120,8 +153,8 @@ elif args.points is not None:
     bottom_corner = [1,1]
     objects = (ds.f_two_point_spring(p1=args.points[:2], p2=args.points[2:], v_init=v_init, k=k), ds.f_stationary(top_corner), ds.f_stationary(bottom_corner))  
     shapes =  (Rectangle(Point(-3,-3), Point(3,3)), Point(top_corner[0], top_corner[1]), Point(bottom_corner[0], bottom_corner[1]))
-    fill_colors = ['black', 'black', 'black']
-    outline_colors = ['black', 'black', 'black']
+    fill_colors = ['black', 'white', 'white']
+    outline_colors = ['black', 'white', 'white']
 
 
 else: # specify the objects in this program 
