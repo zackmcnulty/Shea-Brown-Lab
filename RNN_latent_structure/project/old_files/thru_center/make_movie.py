@@ -31,18 +31,19 @@ import argparse
 from pathlib import Path
 
 
+
 # Define objects and their motion  ==============================================================================================
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--random_points', action='store_true', help='generate movies with mass oscillating through at random angle about a random center')
+parser.add_argument('--random', action='store_true', help='generate movies with mass oscillating through center at random angle')
 parser.add_argument('--name', required=True)
 parser.add_argument('--folder', default='./movie_files')
 parser.add_argument('--train', action='store_true', help='add to training dataset')
 parser.add_argument('--p_test', type=float, help='percent of [0, 2pi] to allocate to testing dataset') 
 parser.add_argument('--theta', type=float, help='angle of oscillation for movie')
-parser.add_argument('--points', type=float, nargs=4,  help='Two points that the mass will oscillate between')
 
 args = parser.parse_args()
+
 
 # each object will be specified by (motion = (dynamics, initial_condition), shape)
 # Shapes will be specified as graphics objects
@@ -50,73 +51,39 @@ args = parser.parse_args()
 #       Shapes earlier in "objects" appear deeper in the image
 
 
-# randomly choose 2 points for the spring/mass to oscillate between.
-# modify args.points and just use code below
-if args.random_points:
 
-    # randomly choose an angle
+# Randomly generate training/testing data
+if args.random: # ... for generating large batches of movies; uses .sh script
+    #NOTE: See the file generate_data.sh for more information about
+    # what I used this 'else' section for
+
     args.p_test = args.p_test / 2
     low_train = np.pi * args.p_test
     high_train = np.pi - low_train
     low_test = -1 * low_train
     high_test = low_train
 
-    # depending on where the two points are chosen to be, its possible the oscillation
-    # occurs over a very short distance. By setting a threshold, we reroll situations where
-    # the block would barely move.
-    threshold = 0.1 
-    max_dist = 0
-    while max_dist < threshold:
-        # randomly choose a first point
-        #p1 = np.random.uniform(low=0,high=1, size=2)
-        p1 = np.mean(np.random.uniform(low=0, high=1, size=(2,5)), axis=1) # instead of just uniform, take the mean of uniform to get a guassian ish distribution that is still bounded by [0,1]
+    if args.train:
+        theta = np.random.uniform(low=low_train, high=high_train)
+    else:
+        theta = np.random.uniform(low=low_test, high=high_test)
 
-        if args.theta is not None:
-            theta = args.theta
-
-        # randomly choose an angle of oscillation
-        elif args.train: # if movie is for training sample
-            theta = np.random.uniform(low=low_train, high=high_train)
-        else: # movie is for testing sample
-            theta = np.random.uniform(low=low_test, high=high_test)
-
-        # randomly choose the second point along the ray starting at p1 in the direction of theta.
-        if theta > np.pi / 2 and theta < 3*np.pi / 2:
-            x_dist = np.abs(p1[0] / np.cos(theta))
-        else:
-            x_dist = np.abs((1-p1[0]) / np.cos(theta))
-
-        if theta < np.pi:
-            y_dist = np.abs((1-p1[1]) / np.sin(theta))
-        else:
-            y_dist = np.abs(p1[1] / np.sin(theta))
-
-        max_dist = min(x_dist, y_dist)
-
-    # Give a distribution that favors longer oscillations
-    min_dist = np.sqrt(threshold/max_dist)
-    dist = max_dist * (np.random.uniform(low=min_dist, high=1)) ** 0.5
+    objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=theta), )  
+    shapes =  (Rectangle(Point(-3,-3), Point(3,3)), )
+    fill_colors = ['black'] 
+    outline_colors = ['black']
 
 
-    p2 =[p1[0] + dist * np.cos(theta), p1[1] + dist * np.sin(theta)]
-
-    args.points = [0,0,0,0]
-    args.points[:2] = p1
-    args.points[2:] = p2
+# generate movies with a spring oscillating at the given angle through origin
+elif args.theta is not None:
     
+    # convert angle given in degrees to radians
+    args.theta = np.pi / 180 * args.theta
 
-
-# Generate movies with a spring oscillating between two specific points.
-elif args.points is not None:
-    v_init = 2
-    k = 1
-
-    top_corner = [0,0]
-    bottom_corner = [1,1]
-    objects = (ds.f_two_point_spring(p1=args.points[:2], p2=args.points[2:], v_init=v_init, k=k), ds.f_stationary(top_corner), ds.f_stationary(bottom_corner))  
-    shapes =  (Rectangle(Point(-3,-3), Point(3,3)), Point(top_corner[0], top_corner[1]), Point(bottom_corner[0], bottom_corner[1]))
-    fill_colors = ['black', 'white', 'white']
-    outline_colors = ['black', 'white', 'white']
+    objects = (ds.f_angled_spring(initial_condition=[0,0,1], theta=args.theta), )  
+    shapes =  (Rectangle(Point(-3,-3), Point(3,3)), )
+    fill_colors = ['black']
+    outline_colors = ['black']
 
 
 else: # specify the objects in this program 
@@ -259,7 +226,7 @@ for frame in range(1, len(t_vals)):
 
 
 # Convert all these frames into a movie
-os.system("ffmpeg -r {:f} -i ./tmp_images/frame%05d.png -vcodec mpeg4 -y {:s} -loglevel quiet".format(movie_fps, str(full_path.absolute())))
+os.system("ffmpeg -r {:f} -i ./tmp_images/frame%05d.png -vcodec mpeg4 -y {:s}".format(movie_fps, str(full_path.absolute())))
 
 # delete the temporary folders created
 os.system('rm -rf tmp_images')
