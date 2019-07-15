@@ -227,4 +227,4 @@ for i in range(n):
     ax.get_yaxis().set_visible = False
 
 plt.show()
-
+plt.savefig('analysis_plots/autoencoder/conv_autoencoder_l1_{}.png'.format(str(args.l1)))
