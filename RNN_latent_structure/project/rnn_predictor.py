@@ -63,11 +63,12 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', default=50, type=int, help='number of epochs in neural net training')
 parser.add_argument('--batch_size', default=5, type=int, help='batch size for training')
-parser.add_argument('--name', default='rnn_predictior_BCE', help='file name to save to RNN Keras model under in the ./models folder')
+parser.add_argument('--name', default='rnn_predictior', help='file name to save to RNN Keras model under in the ./models folder')
 parser.add_argument('--load', help='file name for a previously trained RNN that you wish to train further.') # specify a full pre-trained RNN model to load
 parser.add_argument('--autoencoder', help='filename that stores the Keras model with the pre-trained convolutional autoencoder (see convolution_autoencoder.py)') # specify the filename for the weights trained to autoencode
 parser.add_argument('--dt', default=1, type=int, help='Number of frames ahead in movie to make prediction')
 parser.add_argument('--l1', default=0, type=float, help='lambda value for l1 regularization on RNN weights')
+parser.add_argument('--l2', default=0, type=float, help='lambda value for l2 regularization on RNN weights')
 args = parser.parse_args()
 
 if args.load is None and args.autoencoder is None:
@@ -84,10 +85,10 @@ l1 = args.l1 # l1 penalization on RNN weights
 rnn_size = 64
 
 # Check if a model already exists with the given filename
-if not args.load is None and args.name is None:
+if not args.load is None:
     model_filename = Path(args.load)
 else:
-    model_filename = Path(model_name + "_dt_" + str(dt) +'_l1_' + str(l1) +  ".h5")
+    model_filename = Path(model_name + "_dt_" + str(dt) +'_l1_' + str(l1) + "_l2_" + str(args.l2) +  ".h5")
     model_filename = 'models' / model_filename
 
 if model_filename.exists():
@@ -219,7 +220,7 @@ else:
     model.add(SimpleRNN(rnn_size, 
                   return_sequences = True,
                   activation = 'tanh',
-                  recurrent_regularizer=regularizers.l1(l1),
+                  recurrent_regularizer=regularizers.l1_l2(l1=args.l1, l2=args.l2),
                   recurrent_initializer=initializers.Identity(),
                   name='rnn'))
     # NOTE: since the RNN changes size of output of the final Conv2D layer in encoding section, we somehow have
@@ -336,4 +337,4 @@ for i in range(n):
         plt.ylabel('Predicted (t+dt)')
 
 plt.show()
-
+plt.savefig('analysis_plots/rnn_predictor/{}_dt_{}_l1_{}_l2_{}.png'.format(args.name, args.dt, args.l1, args.l2))
