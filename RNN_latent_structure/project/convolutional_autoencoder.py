@@ -52,29 +52,39 @@ import time
 # note now we are not going to vectorize our data because we care about the local structure
 # instead, input will be fed in as matrices (i.e. frame by frame)
 parser = argparse.ArgumentParser()
-parser.add_argument('--epochs', default=50, type=int)
-parser.add_argument('--batch_size', default=128, type=int)
-parser.add_argument('--name')
-parser.add_argument('--load') # specify a file to load
-parser.add_argument('--l1', default=0, type=float, help='l1 penalization on kernels of convolutional layers') # specify a file to load
+parser.add_argument('--epochs', default=50, type=int, help='number of epochs to train for')
+parser.add_argument('--batch_size', default=128, type=int, help='batch size for SGD in training')
+parser.add_argument('--name', help='name of model file')
+parser.add_argument('--load', help='load a keras model file of a previously trained autoencoder') # specify a file to load
+parser.add_argument('--save_fig', action='store_true', default=False, help='save figure of training results') 
+parser.add_argument('--show_movie', action='store_true', default=False, help='show movie of training results') 
+parser.add_argument('--l1', default=0, type=float, help='l1 penalization on kernels of convolutional layers') 
+
 args = parser.parse_args()
 
 epochs = args.epochs
 batch_size = args.batch_size
 model_name = args.name
-l1 = args.l1
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
 
 # Save the Keras model
-if args.load is not None and args.name is None:
-    model_filename = Path(args.load)
+if args.load is not None:
+
+    model_args = args.load[:-3].split('_')
+    args.l1 = float(model_args[model_args.index('l1') + 1])
+
+    if args.name is None: 
+        model_filename = Path(args.load)
+    else: 
+        model_filename = Path(model_name + "_l1_" + str(args.l1) + ".h5")
+
 
 else:
     if args.name is None: model_name = 'conv_autoencoder'
-    model_filename = Path(model_name + "_l1_" + str(l1) + ".h5")
+    model_filename = Path(model_name + "_l1_" + str(args.l1) + ".h5")
     model_filename = 'models' / model_filename 
 
-if model_filename.exists():
+if model_filename.exists() and epochs > 0:
     answer = input('File name ' + model_filename.name + ' already exists. Overwrite [y/n]? ')
     if not 'y' in answer.lower():
         sys.exit()
@@ -159,28 +169,28 @@ else:
     # padding prevents the change of shape due to down/upsampling
     model.add(ZeroPadding2D(((2,1),(2,1)), input_shape = image_shape))  # (61,61, 1) --> (64,64, 1)
 
-    model.add(Conv2D(16, (3,3), activation='relu', padding='same', kernel_regularizer=regularizers.l1(l1)))         # (64, 64, 1) --> (64, 64, 16) 
+    model.add(Conv2D(16, (3,3), activation='relu', padding='same', kernel_regularizer=regularizers.l1(args.l1)))         # (64, 64, 1) --> (64, 64, 16) 
     model.add(MaxPooling2D((2,2), padding='same'))                          # (64, 64, 16) --> (32, 32, 16)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1)))      # (32,32, 16) --> (32,32, 8)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(args.l1)))      # (32,32, 16) --> (32,32, 8)
     model.add(MaxPooling2D((2,2), padding = 'same'))                        # (32, 32, 8) --> (16,16, 8)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1)))      # (16,16,8) --> (16,16,4)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(args.l1)))      # (16,16,8) --> (16,16,4)
     model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
-    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1)))      # (16,16,8) --> (16,16,4)
+    model.add(Conv2D(8, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(args.l1)))      # (16,16,8) --> (16,16,4)
     model.add(MaxPooling2D((2,2), padding = 'same'))                        # (16, 16, 4) --> (4, 4, 4)
-    model.add(Conv2D(4, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1)))      # (4,4,4) --> (4,4,1)
+    model.add(Conv2D(4, (3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(args.l1)))      # (4,4,4) --> (4,4,1)
 
 
     # decode the lower dimensional representation back into an image
-    model.add(Conv2D(4,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1))) # (4,4,1) --> (4,4,4)
+    model.add(Conv2D(4,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(args.l1))) # (4,4,1) --> (4,4,4)
     model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
-    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1))) # (4,4,1) --> (4,4,4)
+    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(args.l1))) # (4,4,1) --> (4,4,4)
     model.add(UpSampling2D((2,2)))                                    # (4,4,4) -> (16,16,4)
-    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(l1))) # (16,16,4) --> (16,16,8)
+    model.add(Conv2D(8,(3,3), activation = 'relu', padding = 'same', kernel_regularizer=regularizers.l1(args.l1))) # (16,16,4) --> (16,16,8)
     model.add(UpSampling2D((2,2)))                                    # (16,16,8) -> (32,32,8)
-    model.add(Conv2D(16, (3,3), activation = 'relu', padding='same', kernel_regularizer=regularizers.l1(l1)))# (32,32,8) -> (32,32,16)
+    model.add(Conv2D(16, (3,3), activation = 'relu', padding='same', kernel_regularizer=regularizers.l1(args.l1)))# (32,32,8) -> (32,32,16)
     model.add(UpSampling2D((2,2)))                                    # (32,32,16) -> (64,64,16)
     # want to use sigmoid as our final activation function to make the output more
-    model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same', kernel_regularizer=regularizers.l1(l1))) # (64,64,16) -> (64,64, 1)
+    model.add(Conv2D(1, (3,3), activation='sigmoid', padding='same', kernel_regularizer=regularizers.l1(args.l1))) # (64,64,16) -> (64,64, 1)
 
     model.add(Cropping2D(((2,1),(2,1)))) # (64,64,1) -> (61,61, 1)
 
@@ -191,14 +201,16 @@ else:
 
 # ================================================================================================
 # fit model (train network)!
-model.fit(x_train, x_train,
-          epochs = epochs, 
-          batch_size = batch_size, 
-          shuffle = True,
-          validation_data = (x_test, x_test))
+if epochs > 0:
+    model.fit(x_train, x_train,
+              epochs = epochs, 
+              batch_size = batch_size, 
+              shuffle = True,
+              validation_data = (x_test, x_test))
 
-# NOTE: Saves the model to the given model name in the folder ./models
-model.save(str(model_filename))
+    # NOTE: Saves the model to the given model name in the folder ./models
+    model.save(str(model_filename))
+
 model.summary()
 
 # make predictions!
@@ -226,5 +238,35 @@ for i in range(n):
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
 
+
 plt.show()
-plt.savefig('analysis_plots/autoencoder/conv_autoencoder_l1_{}.png'.format(str(args.l1)))
+
+if args.save_fig:
+    plt.savefig('analysis_plots/autoencoder/conv_autoencoder_l1_{}.png'.format(str(args.l1)))
+
+# PLOT MOVIE OF RESULTS! ====================================
+
+
+if args.show_movie:
+    n = 100
+    plt.ion()
+    plt.figure(figsize=(20,4))
+    plt.show()
+    for i in range(n):
+        # display original at time t (in top row)
+        ax = plt.subplot(2, 1, 1) # which subplot to work with; 2 rows, n columns, slot i+1
+        plt.imshow(true_images[i].reshape(image_shape[0], image_shape[1]))
+        plt.gray()
+        ax.get_xaxis().set_visible = False
+        ax.get_yaxis().set_visible = False
+
+        # display predicted (in bottom row)
+        ax = plt.subplot(2, 1, 2) # which subplot to work with; 2 rows, n columns, slot i+1
+        plt.imshow(predicted_images[i].reshape(image_shape[0], image_shape[1]))
+        plt.gray()
+        ax.get_xaxis().set_visible = False
+        ax.get_yaxis().set_visible = False
+
+        plt.draw()
+        plt.pause(0.001)
+        plt.clf()

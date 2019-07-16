@@ -63,12 +63,16 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--epochs', default=50, type=int, help='number of epochs in neural net training')
 parser.add_argument('--batch_size', default=5, type=int, help='batch size for training')
-parser.add_argument('--name', default='rnn_predictior', help='file name to save to RNN Keras model under in the ./models folder')
+parser.add_argument('--name', default='rnn_predictor', help='file name to save to RNN Keras model under in the ./models folder')
 parser.add_argument('--load', help='file name for a previously trained RNN that you wish to train further.') # specify a full pre-trained RNN model to load
 parser.add_argument('--autoencoder', help='filename that stores the Keras model with the pre-trained convolutional autoencoder (see convolution_autoencoder.py)') # specify the filename for the weights trained to autoencode
 parser.add_argument('--dt', default=1, type=int, help='Number of frames ahead in movie to make prediction')
 parser.add_argument('--l1', default=0, type=float, help='lambda value for l1 regularization on RNN weights')
 parser.add_argument('--l2', default=0, type=float, help='lambda value for l2 regularization on RNN weights')
+parser.add_argument('--save_fig', action='store_true', default=False, help="save figure of results from training") 
+parser.add_argument('--show_movie', action='store_true', default=False, help="show movie of results from training") 
+parser.add_argument('--rnn_activation', default='tanh', help='activation function to use on RNN')
+parser.add_argument('--rnn_size', default=64, type=int,  help='number of neurons in RNN')
 args = parser.parse_args()
 
 if args.load is None and args.autoencoder is None:
@@ -78,20 +82,28 @@ epochs = args.epochs
 batch_size = args.batch_size
 model_name = args.name
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
-dt = args.dt # number of frames ahead to make a prediction
-l1 = args.l1 # l1 penalization on RNN weights
 
 # For simple RNN
-rnn_size = 64
+rnn_size = args.rnn_size
 
-# Check if a model already exists with the given filename
+# If a model is loaded, load the previous values of dt,l1,l2
 if not args.load is None:
+    name = args.load[:-3]
+    model_args = name.split('_')
+    args.dt = int(model_args[model_args.index('dt') + 1])
+    args.l1 = float(model_args[model_args.index('l1') + 1])
+    args.l2 = float(model_args[model_args.index('l2') + 1])
+
+
+# If model is loaded and not given a new name, just give it the same name as last time.
+if not args.load is None and args.name is "rnn_predictor":
     model_filename = Path(args.load)
+
 else:
-    model_filename = Path(model_name + "_dt_" + str(dt) +'_l1_' + str(l1) + "_l2_" + str(args.l2) +  ".h5")
+    model_filename = Path(model_name + "_" + str(args.activation) + str(args.rnn_size) + "_" +"_dt_" + str(args.dt) +'_l1_' + str(args.l1) + "_l2_" + str(args.l2) +  ".h5")
     model_filename = 'models' / model_filename
 
-if model_filename.exists():
+if model_filename.exists() and epochs > 0:
     answer = input('File name ' + model_filename.name + ' already exists. Overwrite [y/n]? ')
     if not 'y' in answer.lower():
         sys.exit()
@@ -126,7 +138,7 @@ image_shape = [frameHeight, frameWidth]
     
 # you start with frameCount frames. Since the input and output have to be staggered by dt, this means
 # that the input and output can have at most (frameCount - dt) frames as dt of their frames do not overlap.
-num_frames = frameCount - dt
+num_frames = frameCount - args.dt
 
 x_train = np.empty((num_train_movies, num_frames, frameHeight, frameWidth, 1))
 y_train = np.empty((num_train_movies, num_frames, frameHeight, frameWidth, 1))
@@ -151,16 +163,16 @@ for f in os.scandir('./movie_files'):
         if f.name.startswith('train'):
             if train_ind < num_frames:  
                 x_train[train_movie_num, train_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
-            if train_ind >= dt:
-                y_train[train_movie_num, train_ind - dt, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            if train_ind >= args.dt:
+                y_train[train_movie_num, train_ind - args.dt, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
 
             train_ind += 1
 
         elif f.name.startswith('test'):
             if test_ind < num_frames:  
                 x_test[test_movie_num, test_ind, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
-            if test_ind >= dt:
-                y_test[test_movie_num, test_ind - dt, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
+            if test_ind >= args.dt:
+                y_test[test_movie_num, test_ind - args.dt, :, :, 0] = gray / 255.0 # NOTE: convert pixels to [0,1]
             test_ind += 1
 
     if f.name.startswith('train'): 
@@ -170,9 +182,6 @@ for f in os.scandir('./movie_files'):
         test_movie_num += 1
         test_ind =  0
 
-# TODO: Delete this
-#x_train = x_train[:, :, :, :, 0]
-#x_test = x_test[:, :, :, :, 0]
 
 # convert the image into a lower dimensional representation
 
@@ -219,10 +228,11 @@ else:
     model.add(TimeDistributed(Flatten()))
     model.add(SimpleRNN(rnn_size, 
                   return_sequences = True,
-                  activation = 'tanh',
+                  activation = args.rnn_activation,
                   recurrent_regularizer=regularizers.l1_l2(l1=args.l1, l2=args.l2),
                   recurrent_initializer=initializers.Identity(),
                   name='rnn'))
+
     # NOTE: since the RNN changes size of output of the final Conv2D layer in encoding section, we somehow have
     #       to map the dimension back down. This is what the Dense layer below does
     #model.add(TimeDistributed(Dense(out_shape[1] * out_shape[2], activation = 'relu', name = 'ff')))
@@ -241,20 +251,22 @@ else:
 
 # ================================================================================================
 # fit model (train network)!
-model.fit(x_train, y_train,
-          epochs = epochs, 
-          batch_size = batch_size, 
-          shuffle = True,
-          validation_data = (x_test, y_test))
-#          validation_split = 0.1)
+if epochs > 0:
+    model.fit(x_train, y_train,
+              epochs = epochs, 
+              batch_size = batch_size, 
+              shuffle = True,
+              validation_data = (x_test, y_test))
+    #          validation_split = 0.1)
 
 
-# NOTE: Saves the model to the given model name in the folder ./models
-model.save(str(model_filename))
+    # NOTE: Saves the model to the given model name in the folder ./models
+    model.save(str(model_filename))
+    
 model.summary(line_length=100)
 
 # make predictions on training dataset!
-predicted_images = model.predict(x_train)[0] # the [0] just takes predictions for first video
+predicted_images = model.predict(x_train[:1, :, :, :, :])[0] # the [0] just takes predictions for first video
 true_images = y_train[0, :, :, :, :]
 initial_images = x_train[0, :, :, :, :]
 
@@ -299,7 +311,7 @@ plt.show()
 
 
 # make predictions on test dataset!
-predicted_images = model.predict(x_test)[0] # the [0] just takes predictions for first video
+predicted_images = model.predict(x_test[:1, :, :, :, :])[0] # the [0] just takes predictions for first video
 true_images = y_test[0, :, :, :, :]
 initial_images = x_test[0, :, :, :, :]
 
@@ -337,4 +349,42 @@ for i in range(n):
         plt.ylabel('Predicted (t+dt)')
 
 plt.show()
-plt.savefig('analysis_plots/rnn_predictor/{}_dt_{}_l1_{}_l2_{}.png'.format(args.name, args.dt, args.l1, args.l2))
+
+if args.save_fig:
+    plt.savefig('analysis_plots/rnn_predictor/{}_dt_{}_l1_{}_l2_{}.png'.format(args.name, args.dt, args.l1, args.l2))
+
+
+# ========== make movie of results! ===============================
+
+if args.show_movie:
+    n = 50
+    plt.ion()
+    plt.figure(figsize=(20,4))
+    plt.show()
+    for i in range(n):
+        # display original at time t (in top row)
+        ax = plt.subplot(3, 1, 1) # which subplot to work with; 2 rows, n columns, slot i+1
+        plt.imshow(initial_images[i].reshape(image_shape[0], image_shape[1]))
+        plt.gray()
+        ax.get_xaxis().set_visible = False
+        ax.get_yaxis().set_visible = False
+
+        # display original at time t+dt (in middle row)
+        ax = plt.subplot(3, 1, 2) # which subplot to work with; 2 rows, n columns, slot i+1
+        plt.imshow(true_images[i].reshape(image_shape[0], image_shape[1]))
+        plt.gray()
+        ax.get_xaxis().set_visible = False
+        ax.get_yaxis().set_visible = False
+
+        # display predicted at time t+dt (in bottom row)
+        ax = plt.subplot(3, 1, 3) # which subplot to work with; 2 rows, n columns, slot i+1
+        plt.imshow(predicted_images[i].reshape(image_shape[0], image_shape[1]))
+        plt.gray()
+        ax.get_xaxis().set_visible = False
+        ax.get_yaxis().set_visible = False
+
+        plt.draw()
+        plt.pause(0.001)
+        plt.clf()
+
+
