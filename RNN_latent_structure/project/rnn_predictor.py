@@ -100,7 +100,7 @@ if not args.load is None and args.name is "rnn_predictor":
     model_filename = Path(args.load)
 
 else:
-    model_filename = Path(model_name + "_" + str(args.activation) + str(args.rnn_size) + "_" +"_dt_" + str(args.dt) +'_l1_' + str(args.l1) + "_l2_" + str(args.l2) +  ".h5")
+    model_filename = Path(model_name + "_" + str(args.rnn_activation) + str(args.rnn_size) + "_dt_" + str(args.dt) +'_l1_' + str(args.l1) + "_l2_" + str(args.l2) +  ".h5")
     model_filename = 'models' / model_filename
 
 if model_filename.exists() and epochs > 0:
@@ -351,7 +351,7 @@ for i in range(n):
 plt.show()
 
 if args.save_fig:
-    plt.savefig('analysis_plots/rnn_predictor/{}_dt_{}_l1_{}_l2_{}.png'.format(args.name, args.dt, args.l1, args.l2))
+    plt.savefig('analysis_plots/rnn_predictor/{}.png'.format(model_filename.name[:-3]))
 
 
 # ========== make movie of results! ===============================
