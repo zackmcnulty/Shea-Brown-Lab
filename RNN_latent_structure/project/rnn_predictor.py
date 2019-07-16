@@ -235,7 +235,9 @@ else:
 
     # NOTE: since the RNN changes size of output of the final Conv2D layer in encoding section, we somehow have
     #       to map the dimension back down. This is what the Dense layer below does
-    #model.add(TimeDistributed(Dense(out_shape[1] * out_shape[2], activation = 'relu', name = 'ff')))
+    if args.rnn_size != out_shape[1] * out_shape[2] * out_shape[3]:
+        model.add(TimeDistributed(Dense(out_shape[1] * out_shape[2] * out_shape[3], activation = 'relu', name = 'ff')))
+
     model.add(TimeDistributed(Reshape((out_shape[1], out_shape[2], out_shape[3]))))
 
     for i in range(num_layers//2, num_layers):
