@@ -52,25 +52,56 @@ nodes do NOT have access to the internet, so nothing can be downloaded outside H
 ## GSCRATCH
 
 While you have a home directory, the directory you start in when you log in, this location has a small memory capacity allocated to it. Beyond private information (i.e. SSH keys, logon scripts, etc)
-most files should be stored instead in your gscratch folder. The location of these directories are:
+most files should be stored instead in your gscratch folder. These are large storage folders **accessible to the entire group**. The location of these directories are:
 
-```/gscratch/group_name/user_name```
+```/gscratch/group_name/```
 
 
-For me under the STF group, its:
+Likely, each user will want to create their own individual folder within this group folder. For me under the STF group (I had to create my own user folder, so you might too), its:
 
 ```/gscratch/stf/zmcnulty```
 
-This is where all data/code files will be stored for anything you are trying to do on a compute node. Use the scp command (while on a build node) in bash to transfer files locally (or from the Lolo archives?) to this folder
-before running jobs on some of the compute nodes. Think of this as your main workspace for anything you are trying to do on Hyak. Here is an example of how to transfer files with scp. This is run from my local machine (NOT logged onto hyak):
+This is where all data/code files will be stored for anything you are trying to do on a compute node. Think of this as your main workspace for anything you are trying to do on Hyak. There are a couple different ways to move files/scripts into this gscratch folder so you can use them on Hyak. 
+
+##### Using Git to Transfer Files
+
+Since both the logon and build nodes have access to the internet, you can use git repositories to move files as well as for version control. For example, I have a GitHub repository storing most of the
+code I use in this lab. By cloning this repository both locally and on Hyak, I can just use GitHub pushes/pulls to keep everything up to date both locally and on Hyak.
+
+
+##### Using scp to Transfer files
+
+scp is a bash command that allows you to securely transfer files between two servers (or from a local device like a laptop to a server). Its basic syntax is:
+
+```
+scp <user>@<SOURCE HOST>:path/to/file user@<TARGET HOST>:path/to/send/file
+```
+
+Note that the `<user>@<HOST>:` part is not required if that location is on the server you are already on. Instead, you can just list the path (absolute or relative) to the file. A commonly used flag is the `-r` recursive flag. This allows you to copy entire folders of files. Here are some examples:
+
+**local (i.e. laptop) to server (i.e. Hyak)**
+
+I would run these commands from my laptop (NOT logged into Hyak).
 
 ```
 scp -r local_folder/ user_id@mox.hyak.uw.edu:path/to/folder/on/server
 scp -r project/ zmcnulty@mox.hyak.uw.edu:/gscratch/stf/zmcnulty
 ```
 
-The second command copies the entire project/ folder from my local machine (-r stands for recursive; copy folder and all its subfolders, etc) to my
+Note that since we run these locally, we do not have to provide a `<user>@<SOURCE HOST>:` for the source server: we instead just use the relative path. For example, the second command copies the entire project/ folder (located in my current working directory) from my local machine (-r stands for recursive; copy folder and all its subfolders, etc) to my
 scratch folder on Hyak (/gscratch/stf/zmcnulty)
+
+**server (Hyak) to local (laptop)**
+
+I would run these commands from my laptop (NOT logged into Hyak)
+
+```
+scp -r user_id@mox.hyak.uw.edu:path/to/folder/on/server local_folder/
+scp -r zmcnulty@mox.hyak.uw.edu:/gscratch/stf/zmcnulty/project/ ./
+```
+
+Note that since we run these locally, we do not have to provide a `<user>@<TARGET HOST>:` for the target server: we instead just use the relative path. For example, the second command copies the entire project/ folder from Hyak into my current working directory.
+
 
 
 
@@ -79,9 +110,9 @@ scratch folder on Hyak (/gscratch/stf/zmcnulty)
 The modules are different types of software that are avaible on Hyak pre-downloaded (A full list is available [here](https://wiki.cac.washington.edu/display/hyakusers/Hyak+Software)). This software is pre-downloaded, but has to be loaded onto your node before it can be used. Below are some of the commands that can help.
 
 - `module avail`  :  list all available modules for loading
+- `module help <path/to/module>` : prints information about the module (i.e. what it contains, further instructions on how to activate module, etc).
 - `module load <path/to/module>`  : load a module; give the path listed by the "module avail" command
 - `module list`  : list of currently loaded modules (modules ready to be used in future commands)
-- `module help <path/to/module>` : prints information about the module (i.e. what it contains, further instructions on how to activate module, etc).
 
 Only modules that are currently loaded can be used. These are a fast way to get large, commonly used software packages. 
 Many of the common coding languages (R, MATLAB, Python, Mathematica) are available here, although you may choose to download them 
@@ -236,14 +267,23 @@ batch/slurm file. An example of this is given below.
     * Mostly, the "build" partition is used because it can connect to outside hyak. Thus, its useful for using git, transferring files to/from Hyak, and installing software packages (like a Python Library).
     * interactive mode is NOT advisable for large jobs.
 	
-Running the commands `squeue -u zmcnulty` or `squeue -p group_name` to see your/your groups respectively list of jobs. It will output lines of the form:
+Running the commands `squeue -u username` or `squeue -p group_name` to see your/your groups respectively list of jobs. It will output lines of the form:
 
 ```
 JOBID    PARTITION     NAME       USER      ST       TIME   NODES   NODELIST(REASON)
 997755       stf      test_job   zmcnulty   PD       0:00     1       (Resources)
 ```
 
-This gives the job ID, the group name, the job name, the user running the job, whether the job is running (R) or waiting (PD), number of nodes the job is running on, and the nodes the job is running on or a reason (REASON) the job is not running.
+This gives:
+* JOBID: the job ID 
+* PARTITION: partition job is running on (either the group name or backfill typically)
+* NAME: job name (as specified in the job submission; see the example batch file at the bottom) 
+* USER: the user running the job / who submitted job
+* ST: whether the job is running (R) or waiting to run (PD) 
+* TIME: how long the job has been running for
+* NODES: number of nodes the job is running on
+* NODELIST: list of the nodes the job is running on or a reason (REASON) the job is not running.
+
 To cancel a job at any time, just do `scancel job_ID`
 
 If you want information on your groups partition of Hyak (i.e. what nodes your group owns), use the `sinfo -p group_name` command.
@@ -255,7 +295,15 @@ If you want information on your groups partition of Hyak (i.e. what nodes your g
 
 The backfill is one of the coolest features of Hyak. Essentially, if someone is not using one of their nodes at any given time, you can run your code off it!
 However, this comes with a catch. As soon as that person wants access to their node, you get kicked off. Some info can be found [here](https://wiki.cac.washington.edu/display/hyakusers/Mox_checkpoint) on the Hyak Wiki.
-To specify you want your job to run in backfill, simply change the partition / account name in the batch file. Specifically, use the account `group_name-ckpt` and the partition `ckpt`.
+To specify you want your job to run in backfill, simply change the partition / account name in the batch file. Specifically, use the account `group_name-ckpt` and the partition `ckpt` (for example, in the STF group use the account `stf-ckpt` and partition `ckpt`.
+If your code requires a GPU, add the flag `--gres=gpu:P100:1` to your job command. Specifically you would run the commands:
+
+``` 
+    sbatch job_script.slurm --gres=gpu:P100:1
+
+```
+
+where in the job_script you specify you are using the ckpt account/partition we mentioned above.
 
 
 
