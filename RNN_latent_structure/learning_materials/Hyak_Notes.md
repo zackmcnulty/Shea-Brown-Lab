@@ -12,8 +12,8 @@ Lots of information on Hyak can be found on their [wiki](https://wiki.cac.washin
 the Research Computing Club runs a [Slack](https://uw-rcc.slack.com/messages) channel where smart and useful people reside. Also, there appears to be some sort
 of question [forum](https://talk.uw-hp.cc/login) where many common questions are answered.
 
-If you are a student at UW (graduate or undergraduate) you can apply for free access to the Student Technology Fund group. STF purchased several
-nodes for use by the Research Computing Club at UW. To get access to these nodes, follow the instructions found [here](http://depts.washington.edu/uwrcc/getting-started-2/getting-started/).
+If you are a student at UW (graduate or undergraduate) you can apply for free access to the Student Technology Fund group. STF purchased quite a few 
+nodes (around 100?), 10 of which have GPUs, for use by the Research Computing Club at UW. To get access to these nodes, follow the instructions found [here](http://depts.washington.edu/uwrcc/getting-started-2/getting-started/).
 This is what I have been using and it works pretty well. 
 
 ## Logging In and Navigating Hyak
@@ -63,13 +63,13 @@ Likely, each user will want to create their own individual folder within this gr
 
 This is where all data/code files will be stored for anything you are trying to do on a compute node. Think of this as your main workspace for anything you are trying to do on Hyak. There are a couple different ways to move files/scripts into this gscratch folder so you can use them on Hyak. 
 
-##### Using Git to Transfer Files
+### Using Git to Transfer Files
 
 Since both the logon and build nodes have access to the internet, you can use git repositories to move files as well as for version control. For example, I have a GitHub repository storing most of the
 code I use in this lab. By cloning this repository both locally and on Hyak, I can just use GitHub pushes/pulls to keep everything up to date both locally and on Hyak.
 
 
-##### Using scp to Transfer files
+### Using scp to Transfer files
 
 scp is a bash command that allows you to securely transfer files between two servers (or from a local device like a laptop to a server). Its basic syntax is:
 
@@ -79,7 +79,7 @@ scp <user>@<SOURCE HOST>:path/to/file user@<TARGET HOST>:path/to/send/file
 
 Note that the `<user>@<HOST>:` part is not required if that location is on the server you are already on. Instead, you can just list the path (absolute or relative) to the file. A commonly used flag is the `-r` recursive flag. This allows you to copy entire folders of files. Here are some examples:
 
-**local (i.e. laptop) to server (i.e. Hyak)**
+#####local (i.e. laptop) to server (i.e. Hyak)
 
 I would run these commands from my laptop (NOT logged into Hyak).
 
@@ -91,7 +91,7 @@ scp -r project/ zmcnulty@mox.hyak.uw.edu:/gscratch/stf/zmcnulty
 Note that since we run these locally, we do not have to provide a `<user>@<SOURCE HOST>:` for the source server: we instead just use the relative path. For example, the second command copies the entire project/ folder (located in my current working directory) from my local machine (-r stands for recursive; copy folder and all its subfolders, etc) to my
 scratch folder on Hyak (/gscratch/stf/zmcnulty)
 
-**server (Hyak) to local (laptop)**
+#####server (Hyak) to local (laptop)
 
 I would run these commands from my laptop (NOT logged into Hyak)
 
@@ -125,6 +125,9 @@ hyak. Instead, we will request interactive access (see the section below to see 
 software. To get one of these, run:
 
 ```srun -p build --nodes 1 --pty /bin/bash```
+
+**If you choose to download your own software, I would get in contact with the members of your group first.** Memory is not free on Hyak, and if you need the software
+it is likely someone else in the group needs it as well. You could consider building a module (see section below) so everyone in the group could load it as needed. 
 
 Once the build node is acquired, there are two main options for installing Python packages.
 
