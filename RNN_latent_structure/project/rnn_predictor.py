@@ -268,19 +268,20 @@ if epochs > 0:
 model.summary(line_length=100)
 
 # make predictions on training dataset!
-predicted_images = model.predict(x_train[:1, :, :, :, :])[0] # the [0] just takes predictions for first video
-true_images = y_train[0, :, :, :, :]
-initial_images = x_train[0, :, :, :, :]
+predicted_images_train = model.predict(x_train[:1, :, :, :, :])[0] # the [0] just takes predictions for first video
+true_images_train = y_train[0, :, :, :, :]
+initial_images_train = x_train[0, :, :, :, :]
 
 # plot stuff ====================================================================================
 
 n = num_results_shown # number of frames to display
 
 plt.figure(figsize=(20,4))
+plt.title('Training dataset')
 for i in range(n):
     # display original at time t (in top row)
     ax = plt.subplot(3, n, i+1) # which subplot to work with; 2 rows, n columns, slot i+1
-    plt.imshow(initial_images[i].reshape(image_shape[0], image_shape[1]))
+    plt.imshow(initial_images_train[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
@@ -289,7 +290,7 @@ for i in range(n):
 
     # display original at time t+dt (in middle row)
     ax = plt.subplot(3, n, i+ 1 + n) # which subplot to work with; 2 rows, n columns, slot i+1
-    plt.imshow(true_images[i].reshape(image_shape[0], image_shape[1]))
+    plt.imshow(true_images_train[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
@@ -298,7 +299,7 @@ for i in range(n):
 
     # display predicted at time t+dt (in bottom row)
     ax = plt.subplot(3, n, i+ 1 + 2*n) # which subplot to work with; 2 rows, n columns, slot i+1
-    plt.imshow(predicted_images[i].reshape(image_shape[0], image_shape[1]))
+    plt.imshow(predicted_images_train[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
@@ -313,19 +314,20 @@ plt.show()
 
 
 # make predictions on test dataset!
-predicted_images = model.predict(x_test[:1, :, :, :, :])[0] # the [0] just takes predictions for first video
-true_images = y_test[0, :, :, :, :]
-initial_images = x_test[0, :, :, :, :]
+predicted_images_test = model.predict(x_test[5:6, :, :, :, :])[0] # the [0] just takes predictions for first video
+true_images_test = y_test[0, :, :, :, :]
+initial_images_test = x_test[0, :, :, :, :]
 
 # plot stuff ====================================================================================
 
 n = num_results_shown # number of frames to display
 
 plt.figure(figsize=(20,4))
+plt.title("testing dataset")
 for i in range(n):
     # display original at time t (in top row)
     ax = plt.subplot(3, n, i+1) # which subplot to work with; 2 rows, n columns, slot i+1
-    plt.imshow(initial_images[i].reshape(image_shape[0], image_shape[1]))
+    plt.imshow(initial_images_test[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
@@ -334,7 +336,7 @@ for i in range(n):
 
     # display original at time t+dt (in middle row)
     ax = plt.subplot(3, n, i+ 1 + n) # which subplot to work with; 2 rows, n columns, slot i+1
-    plt.imshow(true_images[i].reshape(image_shape[0], image_shape[1]))
+    plt.imshow(true_images_test[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
@@ -343,7 +345,7 @@ for i in range(n):
 
     # display predicted at time t+dt (in bottom row)
     ax = plt.subplot(3, n, i+ 1 + 2*n) # which subplot to work with; 2 rows, n columns, slot i+1
-    plt.imshow(predicted_images[i].reshape(image_shape[0], image_shape[1]))
+    plt.imshow(predicted_images_test[i].reshape(image_shape[0], image_shape[1]))
     plt.gray()
     ax.get_xaxis().set_visible = False
     ax.get_yaxis().set_visible = False
@@ -363,24 +365,26 @@ if args.show_movie:
     plt.ion()
     plt.figure(figsize=(20,4))
     plt.show()
+
+    # make results for training dataset
     for i in range(n):
         # display original at time t (in top row)
         ax = plt.subplot(3, 1, 1) # which subplot to work with; 2 rows, n columns, slot i+1
-        plt.imshow(initial_images[i].reshape(image_shape[0], image_shape[1]))
+        plt.imshow(initial_images_train[i].reshape(image_shape[0], image_shape[1]))
         plt.gray()
         ax.get_xaxis().set_visible = False
         ax.get_yaxis().set_visible = False
 
         # display original at time t+dt (in middle row)
         ax = plt.subplot(3, 1, 2) # which subplot to work with; 2 rows, n columns, slot i+1
-        plt.imshow(true_images[i].reshape(image_shape[0], image_shape[1]))
+        plt.imshow(true_images_train[i].reshape(image_shape[0], image_shape[1]))
         plt.gray()
         ax.get_xaxis().set_visible = False
         ax.get_yaxis().set_visible = False
 
         # display predicted at time t+dt (in bottom row)
         ax = plt.subplot(3, 1, 3) # which subplot to work with; 2 rows, n columns, slot i+1
-        plt.imshow(predicted_images[i].reshape(image_shape[0], image_shape[1]))
+        plt.imshow(predicted_images_train[i].reshape(image_shape[0], image_shape[1]))
         plt.gray()
         ax.get_xaxis().set_visible = False
         ax.get_yaxis().set_visible = False
@@ -388,5 +392,34 @@ if args.show_movie:
         plt.draw()
         plt.pause(0.001)
         plt.clf()
+
+    # make results for testing dataset
+    for i in range(n):
+        # display original at time t (in top row)
+        ax = plt.subplot(3, 1, 1) # which subplot to work with; 2 rows, n columns, slot i+1
+        plt.imshow(initial_images_test[i].reshape(image_shape[0], image_shape[1]))
+        plt.gray()
+        ax.get_xaxis().set_visible = False
+        ax.get_yaxis().set_visible = False
+
+        # display original at time t+dt (in middle row)
+        ax = plt.subplot(3, 1, 2) # which subplot to work with; 2 rows, n columns, slot i+1
+        plt.imshow(true_images_test[i].reshape(image_shape[0], image_shape[1]))
+        plt.gray()
+        ax.get_xaxis().set_visible = False
+        ax.get_yaxis().set_visible = False
+
+        # display predicted at time t+dt (in bottom row)
+        ax = plt.subplot(3, 1, 3) # which subplot to work with; 2 rows, n columns, slot i+1
+        plt.imshow(predicted_images_test[i].reshape(image_shape[0], image_shape[1]))
+        plt.gray()
+        ax.get_xaxis().set_visible = False
+        ax.get_yaxis().set_visible = False
+
+        plt.draw()
+        plt.pause(0.001)
+        plt.clf()
+
+
 
 

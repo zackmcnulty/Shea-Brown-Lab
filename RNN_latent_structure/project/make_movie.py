@@ -37,8 +37,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--random_points', action='store_true', help='generate movies with mass oscillating through at random angle about a random center')
 parser.add_argument('--name', required=True)
 parser.add_argument('--folder', default='./movie_files')
-parser.add_argument('--train', action='store_true', help='add to training dataset')
-parser.add_argument('--p_test', type=float, help='percent of [0, 2pi] to allocate to testing dataset') 
+parser.add_argument('--train', action='store_true', default=True, help='add to training dataset')
+parser.add_argument('--p_test', default=0.0, type=float, help='percent of [0, 2pi] to allocate to testing dataset') 
 parser.add_argument('--theta', type=float, help='angle of oscillation for movie')
 parser.add_argument('--points', type=float, nargs=4,  help='Two points that the mass will oscillate between')
 
@@ -107,7 +107,7 @@ if args.random_points:
 
 
 # Generate movies with a spring oscillating between two specific points.
-elif args.points is not None:
+if args.points is not None:
     v_init = 2
     k = 1
 
@@ -117,6 +117,8 @@ elif args.points is not None:
     shapes =  (Rectangle(Point(-3,-3), Point(3,3)), Point(top_corner[0], top_corner[1]), Point(bottom_corner[0], bottom_corner[1]))
     fill_colors = ['black', 'white', 'white']
     outline_colors = ['black', 'white', 'white']
+
+    print('{}, {}, {}, {}'.format(args.points[0], args.points[1], args.points[2], args.points[3]))
 
 
 else: # specify the objects in this program 
