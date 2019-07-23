@@ -79,7 +79,7 @@ scp <user>@<SOURCE HOST>:path/to/file user@<TARGET HOST>:path/to/send/file
 
 Note that the `<user>@<HOST>:` part is not required if that location is on the server you are already on. Instead, you can just list the path (absolute or relative) to the file. A commonly used flag is the `-r` recursive flag. This allows you to copy entire folders of files. Here are some examples:
 
-#####local (i.e. laptop) to server (i.e. Hyak)
+##### local (i.e. laptop) to server (i.e. Hyak)
 
 I would run these commands from my laptop (NOT logged into Hyak).
 
@@ -91,7 +91,7 @@ scp -r project/ zmcnulty@mox.hyak.uw.edu:/gscratch/stf/zmcnulty
 Note that since we run these locally, we do not have to provide a `<user>@<SOURCE HOST>:` for the source server: we instead just use the relative path. For example, the second command copies the entire project/ folder (located in my current working directory) from my local machine (-r stands for recursive; copy folder and all its subfolders, etc) to my
 scratch folder on Hyak (/gscratch/stf/zmcnulty)
 
-#####server (Hyak) to local (laptop)
+##### server (Hyak) to local (laptop)
 
 I would run these commands from my laptop (NOT logged into Hyak)
 
