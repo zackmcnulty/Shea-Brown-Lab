@@ -160,9 +160,6 @@ for f in os.scandir('./movie_files'):
         test_movie_num += 1
         test_ind =  0
 
-# TODO: Delete this
-#x_train = x_train[:, :, :, :, 0]
-#x_test = x_test[:, :, :, :, 0]
 
 # convert the image into a lower dimensional representation
 
