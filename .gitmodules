@@ -7,3 +7,6 @@
 [submodule "RNN_latent_structure/learning_materials/keras/five-video-classification-methods"]
 	path = RNN_latent_structure/learning_materials/keras/five-video-classification-methods
 	url = https://github.com/harvitronix/five-video-classification-methods.git
+[submodule "RNN_latent_structure/project/prednet"]
+	path = RNN_latent_structure/project/prednet
+	url = https://github.com/coxlab/prednet.git

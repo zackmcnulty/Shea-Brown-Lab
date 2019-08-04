@@ -97,7 +97,12 @@ if args.random_points:
     #min_dist = np.sqrt(threshold/max_dist)
     #dist = max_dist * (np.random.uniform(low=min_dist, high=1)) ** 0.5
 
+<<<<<<< HEAD
     dist = max_dist # just use max distance
+=======
+    dist=max_dist # just use max possible distance
+
+>>>>>>> ebe7d2ac75863cec3591eb49ca3bfc4bfc3782d4
 
     p2 =[p1[0] + dist * np.cos(theta), p1[1] + dist * np.sin(theta)]
 
