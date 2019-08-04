@@ -40,6 +40,10 @@ num_results_shown = 10 # number of reconstructed frames vs original to show on t
 # Save the Keras model
 if args.load is not None:
 
+    name = args.load[:-3]
+    model_args = name.split('_')
+    args.dt = int(model_args[model_args.index('dt') + 1]) 
+
     if args.name is None: 
         model_filename = Path(args.load)
     else: 
