@@ -11,6 +11,8 @@ import prednet # import the custom prednet layer, which also import the relevant
 
 from keras.layers import ZeroPadding2D, Cropping2D, TimeDistributed
 from keras.models import Model, Sequential, load_model
+from keras import regularizers as reg
+
 
 from pathlib import Path
 import numpy as np
@@ -40,9 +42,10 @@ num_results_shown = 10 # number of reconstructed frames vs original to show on t
 # Save the Keras model
 if args.load is not None:
 
-    name = args.load[:-3]
-    model_args = name.split('_')
-    args.dt = int(model_args[model_args.index('dt') + 1]) 
+    if args.dt is None:
+        name = args.load[:-3]
+        model_args = name.split('_')
+        args.dt = int(model_args[model_args.index('dt') + 1]) 
 
     if args.name is None: 
         model_filename = Path(args.load)
@@ -179,6 +182,7 @@ else:
                                 return_sequences=True, 
                                 pixel_max=1,
                                 extrap_start_time = num_frames - args.dt, # forcing multi-step prediction
+                                
                                 output_mode='prediction' # return predicted videos
     
     ))
