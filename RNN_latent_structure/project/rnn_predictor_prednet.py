@@ -274,7 +274,7 @@ plt.show()
 
 
 # make predictions on test dataset!
-predicted_images_test = model.predict(x_test[5:6, :, :, :, :])[0] # the [0] just takes predictions for first video
+predicted_images_test = model.predict(x_test[0:1, :, :, :, :])[0] # the [0] just takes predictions for first video
 true_images_test = y_test[0, :, :, :, :]
 initial_images_test = x_test[0, :, :, :, :]
 
