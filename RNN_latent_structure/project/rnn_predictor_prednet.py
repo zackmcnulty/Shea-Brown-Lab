@@ -28,7 +28,7 @@ parser.add_argument('--name', help='name of model file')
 parser.add_argument('--load', help='load a keras model file of a previously trained model') # specify a file to load
 parser.add_argument('--save_fig', action='store_true', default=False, help='save figure of training results') 
 parser.add_argument('--show_movie', action='store_true', default=False, help='show movie of training results') 
-parser.add_argument('--dt', default=10, type=int, help='number of frames ahead to predict in the movie')
+parser.add_argument('--dt', default=1, type=int, help='number of frames ahead to predict in the movie')
 
 args = parser.parse_args()
 
@@ -170,6 +170,13 @@ else:
     A_filt_sizes=(3,3) # size of convolutional windows of A units
     Ahat_filt_sizes=(3,3,3) # size of convolutional windows of Ahat units
     R_filt_sizes=(3,3,3) # size of convolutional windows for R units; the recurrent LSTM units (all LSTM layers have same filter size)
+
+    # extrapolation start time to force multistep prediction
+    if args.dt == 1:
+        start_time = None
+    else:
+        start_time = num_frames - args.dt
+
     model.add(prednet.PredNet(
                                 stack_sizes=stack_sizes,
                                 R_stack_sizes=R_stack_sizes,
@@ -178,7 +185,7 @@ else:
                                 R_filt_sizes=R_filt_sizes,
                                 return_sequences=True, 
                                 pixel_max=1,
-                                extrap_start_time = num_frames - args.dt, # forcing multi-step prediction
+                                extrap_start_time = start_time, # forcing multi-step prediction
                                 output_mode='prediction' # return predicted videos
     
     ))
