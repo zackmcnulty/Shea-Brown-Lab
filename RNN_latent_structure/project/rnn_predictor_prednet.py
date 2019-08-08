@@ -43,8 +43,6 @@ assert args.load is not None or args.dt is not None, "You must either load a mod
 
 if args.save_period is None: args.save_period = args.epochs + 10 # save only at end of session
 
-epochs = args.epochs
-batch_size = args.batch_size
 model_name = args.name
 num_results_shown = 10 # number of reconstructed frames vs original to show on test set
 
@@ -69,7 +67,7 @@ else:
     model_filename = Path(model_name + "_dt_"  + str(args.dt) + ".h5")
     model_filename = 'models' / model_filename 
 
-if model_filename.exists() and epochs > 0 and not args.f:
+if model_filename.exists() and args.epochs > 0 and not args.f:
     answer = input('File name ' + model_filename.name + ' already exists. Overwrite [y/n]? ')
     if not 'y' in answer.lower():
         sys.exit()
@@ -216,16 +214,22 @@ else:
 
 # ================================================================================================
 # fit model (train network)!
-if epochs > 0:
+if args.epochs > 0:
     model.fit(x_train, x_train,
-              epochs = epochs, 
-              batch_size = batch_size, 
-              shuffle = True,
+              epochs = args.epochs, 
+              batch_size = args.batch_size, 
+              shuffle = False,
               validation_data = (x_test, x_test),
 
               # save the keras model every args.save_period epochs. This is helpful for running on the 
               # checkpoint cue on Hyak or for long training sessions (in case something fails)
-              callbacks=[keras.callbacks.ModelCheckpoint(str(model_filename), monitor='val_loss', save_best_only=True,save_weights_only=False, mode='auto', period=args.save_period)]
+              callbacks=[keras.callbacks.ModelCheckpoint(
+                                                            filepath=str(model_filename), 
+                                                            #monitor='val_loss', 
+                                                            #save_best_only=True,
+                                                            save_weights_only=False, 
+                                                            #mode='auto', 
+                                                            period=args.save_period)]
               )
 
     # NOTE: Saves the model to the given model name in the folder ./models
