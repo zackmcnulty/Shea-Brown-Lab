@@ -9,6 +9,7 @@ sys.path.append('./prednet') # append prednet folder to path so we can import pr
 
 import prednet # import the custom prednet layer, which also import the relevant keras, tensorflow, etc that it requires.
 
+import keras
 from keras.layers import ZeroPadding2D, Cropping2D, TimeDistributed
 from keras.models import Model, Sequential, load_model
 from keras import regularizers as reg
@@ -30,9 +31,17 @@ parser.add_argument('--name', help='name of model file')
 parser.add_argument('--load', help='load a keras model file of a previously trained model') # specify a file to load
 parser.add_argument('--save_fig', action='store_true', default=False, help='save figure of training results') 
 parser.add_argument('--show_movie', action='store_true', default=False, help='show movie of training results') 
-parser.add_argument('--dt', default=1, type=int, help='number of frames ahead to predict in the movie')
+parser.add_argument('--dt', type=int, help='number of frames ahead to predict in the movie')
+parser.add_argument('--save_period', type=int, help='How often to save the keras model (number of epochs). Only saves model if error improved from previous model')
+parser.add_argument('-f', action='store_true', help='force the model save. Does not ask whether or not to overwrite')
 
 args = parser.parse_args()
+
+
+assert args.load is not None or args.dt is not None, "You must either load a model or provide a timestep for prediction (use --load or --dt)"
+
+
+if args.save_period is None: args.save_period = args.epochs + 10 # save only at end of session
 
 epochs = args.epochs
 batch_size = args.batch_size
@@ -47,10 +56,12 @@ if args.load is not None:
         model_args = name.split('_')
         args.dt = int(model_args[model_args.index('dt') + 1]) 
 
+
     if args.name is None: 
         model_filename = Path(args.load)
     else: 
         model_filename = Path(model_name + "_dt_"  + str(args.dt) + ".h5")
+        model_filename = 'models' / model_filename 
 
 
 else:
@@ -58,10 +69,13 @@ else:
     model_filename = Path(model_name + "_dt_"  + str(args.dt) + ".h5")
     model_filename = 'models' / model_filename 
 
-if model_filename.exists() and epochs > 0:
+if model_filename.exists() and epochs > 0 and not args.f:
     answer = input('File name ' + model_filename.name + ' already exists. Overwrite [y/n]? ')
     if not 'y' in answer.lower():
         sys.exit()
+
+
+print(str(model_filename))
 
 # Load movie clips ===============================================================================`
 
@@ -207,7 +221,12 @@ if epochs > 0:
               epochs = epochs, 
               batch_size = batch_size, 
               shuffle = True,
-              validation_data = (x_test, x_test))
+              validation_data = (x_test, x_test),
+
+              # save the keras model every args.save_period epochs. This is helpful for running on the 
+              # checkpoint cue on Hyak or for long training sessions (in case something fails)
+              callbacks=[keras.callbacks.ModelCheckpoint(str(model_filename), monitor='val_loss', save_best_only=True,save_weights_only=False, mode='auto', period=args.save_period)]
+              )
 
     # NOTE: Saves the model to the given model name in the folder ./models
     model.save(str(model_filename))
