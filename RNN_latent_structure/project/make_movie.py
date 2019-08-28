@@ -97,19 +97,17 @@ if args.random_points:
     #min_dist = np.sqrt(threshold/max_dist)
     #dist = max_dist * (np.random.uniform(low=min_dist, high=1)) ** 0.5
 
-<<<<<<< HEAD
     dist = max_dist # just use max distance
-=======
-    dist=max_dist # just use max possible distance
-
->>>>>>> ebe7d2ac75863cec3591eb49ca3bfc4bfc3782d4
 
     p2 =[p1[0] + dist * np.cos(theta), p1[1] + dist * np.sin(theta)]
 
     args.points = [0,0,0,0]
     args.points[:2] = p1
     args.points[2:] = p2
-    
+
+    # NOTE: Print which point/angle was chosen. This can be used to label the movie if desired
+    label=','.join([str(x) for x in p1.tolist() + p2 + [theta] ])
+    sys.stdout.write(label)
 
 
 # Generate movies with a spring oscillating between two specific points.
@@ -124,7 +122,7 @@ if args.points is not None:
     fill_colors = ['black', 'white', 'white']
     outline_colors = ['black', 'white', 'white']
 
-    print('{}, {}, {}, {}'.format(args.points[0], args.points[1], args.points[2], args.points[3]))
+    #print('{}, {}, {}, {}'.format(args.points[0], args.points[1], args.points[2], args.points[3]))
 
 
 else: # specify the objects in this program 

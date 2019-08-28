@@ -200,6 +200,7 @@ else:
                                 R_filt_sizes=R_filt_sizes,
                                 return_sequences=True, 
                                 pixel_max=1,
+                                name = "prednet",
 
                                 extrap_start_time = start_time, # forcing multi-step prediction
 
