@@ -49,7 +49,7 @@ def p(x):
 parser = argparse.ArgumentParser()
 parser.add_argument('--load', help='file name for a previously trained RNN that you wish to train further.', required=True) # specify a full pre-trained RNN model to load
 parser.add_argument('--folder', help='path to folder with movie files to perform analysis on',required=True)
-parser.add_argument('--pca', action='store_true')
+parser.add_argument('--make_figs', action='store_true', default=False, help="shows the neural representations plotted on the Principal Components and color coded by feature")
 parser.add_argument('--no_demean', action='store_true', default=False,  help='flag to not demean the rnn/cnn neuron representations')
 args = parser.parse_args()
 
@@ -70,7 +70,7 @@ for i, f in enumerate(os.scandir(args.folder)):
         num_movies += 1
 
         # should be the same for all movies
-        if i == 0:  
+        if num_movies == 1:
             cap = cv2.VideoCapture(f.path)
             frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -185,50 +185,104 @@ pca_coordinates = pca.transform(neural_rep)
 print(pca_coordinates.shape)
 
 
-for feature in range(1, labels.shape[1]):
-    # Choose some way to compare the datapoints. Adjusting the color is good for continuous variables, while adusting the marker
-    # is more suitable for categorical variables
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+if args.make_figs:
+    for feature in range(1, labels.shape[1]):
+        # Choose some way to compare the datapoints. Adjusting the color is good for continuous variables, while adusting the marker
+        # is more suitable for categorical variables
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
 
-    colors = labels[:, feature] # x coord
-    cmap = 'hot'
-    markers = None
+        colors = labels[:, feature] # x coord
+        cmap = 'hot'
+        markers = None
 
-    xs = pca_coordinates[:, 0]
-    ys = pca_coordinates[:, 1]
-    zs = pca_coordinates[:, 2]
+        xs = pca_coordinates[:, 0]
+        ys = pca_coordinates[:, 1]
+        zs = pca_coordinates[:, 2]
 
-    ax.scatter(xs, ys, zs, c=colors, marker=markers, cmap=cmap)
-    ax.set_xlabel('PC 1')
-    ax.set_ylabel('PC 2')
-    ax.set_zlabel('PC 3')
+        ax.scatter(xs, ys, zs, c=colors, marker=markers, cmap=cmap)
+        ax.set_xlabel('PC 1')
+        ax.set_ylabel('PC 2')
+        ax.set_zlabel('PC 3')
 
-    plt.title(df.columns[feature])
+        plt.title(df.columns[feature])
 
-    plt.savefig('analysis_plots/PCA/PC123{}_{}_{}.png'.format(model_name, output_mode, df.columns[feature][1:]))
+        plt.savefig('analysis_plots/PCA/PC123{}_{}_{}.png'.format(model_name, output_mode, df.columns[feature][1:]))
+        plt.show()
+
+
+
+
+
+    for feature in range(1, labels.shape[1]):
+        # Choose some way to compare the datapoints. Adjusting the color is good for continuous variables, while adusting the marker
+        # is more suitable for categorical variables
+        plt.figure()
+
+        colors = labels[:, feature] # x coord
+        cmap = 'hot'
+        markers = None
+
+        xs = pca_coordinates[:, 3]
+        ys = pca_coordinates[:, 4]
+
+        plt.scatter(xs,ys,c=colors,marker=markers,cmap=cmap)
+        plt.xlabel('PC 4')
+        plt.ylabel('PC 5')
+
+        plt.title(df.columns[feature])
+
+        plt.savefig('analysis_plots/PCA/PC45{}_{}_{}.png'.format(model_name, output_mode, df.columns[feature][1:]))
+        plt.show()
+
+
+
+# =======================================================================================================
+
+number_coords = 3
+coordinates = pca_coordinates[:, 0:number_coords] 
+
+
+# https://stackoverflow.com/questions/48312205/find-the-k-nearest-neighbours-of-a-point-in-3d-space-with-python-numpy
+from scipy.spatial import distance
+D = distance.squareform(distance.pdist(coordinates)) # distance matrix
+closest = np.argsort(D, axis=1)
+print(closest)
+
+k = 9 # For each point, find the 3 closest points
+#print(closest[:, 1:k+1])
+
+np.savetxt(args.folder + "/closest.csv", closest, delimiter=',')
+
+
+
+
+"""
+for i in range(closest.shape[0]):
+
+    plt.ion()
+    plt.figure(num=i+1, figsize=(20,4))
     plt.show()
 
+    # make results for training dataset
+    for frame in range(num_frames):
+
+        for neighbor in range(k):
+
+            next_movie = closest[i, neighbor]
+            # display original at time t (in top row)
+            ax = plt.subplot(np.ceil(np.sqrt(k)), np.ceil(np.sqrt(k)), neighbor + 1) # which subplot to work with; 2 rows, n columns, slot i+1
+            #ax = plt.subplot(k, 1, neighbor + 1) # which subplot to work with; 2 rows, n columns, slot i+1
+
+            plt.imshow(movies[next_movie, frame, :, :, :].reshape(frameHeight, frameWidth))
+            plt.gray()
+            ax.get_xaxis().set_visible = False
+            ax.get_yaxis().set_visible = False
 
 
 
-for feature in range(1, labels.shape[1]):
-    # Choose some way to compare the datapoints. Adjusting the color is good for continuous variables, while adusting the marker
-    # is more suitable for categorical variables
-    plt.figure()
+        plt.draw()
+        plt.clf()
 
-    colors = labels[:, feature] # x coord
-    cmap = 'hot'
-    markers = None
-
-    xs = pca_coordinates[:, 3]
-    ys = pca_coordinates[:, 4]
-
-    plt.scatter(xs,ys,c=colors,marker=markers,cmap=cmap)
-    plt.xlabel('PC 4')
-    plt.ylabel('PC 5')
-
-    plt.title(df.columns[feature])
-
-    plt.savefig('analysis_plots/PCA/PC45{}_{}_{}.png'.format(model_name, output_mode, df.columns[feature][1:]))
-    plt.show()
+    plt.close()
+"""
