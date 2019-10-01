@@ -1,7 +1,7 @@
 # Research Documentation
 
 
-I have summarized most of my research goals, progress, and shortcomings in the linked [document](./README.md). Below,
+I have summarized most of my research goals, progress, and shortcomings in the linked [document](https://github.com/zackmcnulty/Shea-Brown-Lab/blob/master/RNN_latent_structure/project/research_goals_and_notes.pdf). Below,
 I list some documentation for a variety of the code found in this repository. I highly suggest any training of the PredNet model
 be on a remote server from the AMATH department or Hyak. The video clips and recurrent structure make these models
 pretty slow to train, so I utilized the GPUs available on Hyak and tensorflow-gpu. If you are new to Hyak, I made
