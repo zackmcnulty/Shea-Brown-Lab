@@ -348,7 +348,8 @@ specifically for the STF group. Below is a full example of a batch script.
 #SBATCH --mem=100G
 
 ## Specify the working directory for this job
-#SBATCH --workdir=/gscratch/stf/zmcnulty/project
+## (old command?) SBATCH --workdir=/gscratch/stf/zmcnulty/project
+# SBATCH --chdir=/gscratch/stf/zmcnulty/project
 
 ## Specify the directory where STDOUT and STDERR files are stored
 #SBATCH --output=/gscratch/stf/zmcnulty/output_files/
