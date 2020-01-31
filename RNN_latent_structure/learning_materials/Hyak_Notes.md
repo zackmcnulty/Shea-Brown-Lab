@@ -5,7 +5,7 @@
 Hyak is a supercomputer owned by UW. It consists of a collection of high-throughput nodes (each of which is roughly equivalent to a high-end server)
 that are capable of parallel computation. Even if you do not plan to parallelize any work, the nodes are still incredibly fast to work on and have
 top of the line equipment (large memory, fast CPUs, and some have GPUs as well). Nodes are bought by individual groups to use, but Hyak has a cool
-feature called "Backfill" which allows users access to all available nodes (although this use is a bit restricted). See the section below on Backfill for more
+feature called "Backfill" which gives users access to all available nodes (although this use is a bit restricted). See the section below on Backfill for more
 information on it.
 
 Lots of information on Hyak can be found on their [wiki](https://wiki.cac.washington.edu/display/hyakusers/WIKI+for+Hyak+users). For further questions,
@@ -25,7 +25,7 @@ ssh -X yourUWnetid@mox.hyak.uw.edu  # for Mox
 ssh -X yourUWnetid@ikt.hyak.uw.edu  # for Ikt (older branch of Hyak)
 ```
 
-you will find yourself in your users home directory. These directories have a small memory capacity (10GB) and are NOT meant to hold any significantly large files.
+you will find yourself in your user's home directory. These directories have a small memory capacity (10GB) and are NOT meant to hold any significantly large files.
 Only really store files here that are meant to be completely private like SSH keys or possibly logon scripts. For all data from experiments and what not, these files
 should be stored in the gscratch directories (see GSCRATCH section below).  
 
@@ -37,10 +37,10 @@ on the Linux OS, check out this [tutorial](https://www.tutorialspoint.com/unix/i
 ## Types of Nodes
 
 - **Log-on Nodes**: When you initially SSH into hyak when you log on, this is the node you start with. It handles all the basic operations allowing you to navigate through Hyak,
-submit jobs, and request access to other nodes. These do NOT have a lot of computing power, and should not be used for anything beyond these simple tasks
+submit jobs, and request access to other nodes. These do NOT have a lot of computing power, and should not be used for anything beyond these simple tasks. TThese nodes have access to the internet and thus are helpful for file transfers, using git, etc.
 
 - **Build Nodes**: These are nodes that all users have access to. They are set aside to help install needed software packages and compile code. Because they are often quick to obtain, they are also helpful
-for testing (in interactive mode; see below) whether your code runs on small samples and do some possible debugging. However, no large computations should be performed on these nodes. These nodes have access to the internet and thus are helpful for file transfers, using git, etc.
+for testing (in interactive mode; see below) whether your code runs on small samples and do some possible debugging. However, no large computations should be performed on these nodes. These nodes have access to the internet and thus are helpful for file transfers, using git, downloading/building source code (their main purpose), etc.
     - To get access to a build node, use the command: `srun -p build --nodes 1 --pty /bin/bash`
 
 - **Compute Nodes**: This is what you are really paying for. These are the nodes with a ton of computational power that you want to be running your large jobs on. You only have unrestricted access to the nodes your group
