@@ -79,7 +79,7 @@ scp <user>@<SOURCE HOST>:path/to/file user@<TARGET HOST>:path/to/send/file
 
 Note that the `<user>@<HOST>:` part is not required if that location is on the server you are already on. Instead, you can just list the path (absolute or relative) to the file. A commonly used flag is the `-r` recursive flag. This allows you to copy entire folders of files. Here are some examples:
 
-##### local (i.e. laptop) to server (i.e. Hyak)
+#### Local (i.e. laptop) to Server (i.e. Hyak)
 
 I would run these commands from my laptop (NOT logged into Hyak).
 
@@ -91,7 +91,7 @@ scp -r project/ zmcnulty@mox.hyak.uw.edu:/gscratch/stf/zmcnulty
 Note that since we run these locally, we do not have to provide a `<user>@<SOURCE HOST>:` for the source server: we instead just use the relative path. For example, the second command copies the entire project/ folder (located in my current working directory) from my local machine (-r stands for recursive; copy folder and all its subfolders, etc) to my
 scratch folder on Hyak (/gscratch/stf/zmcnulty)
 
-##### server (Hyak) to local (laptop)
+#### Server (Hyak) to Local (laptop)
 
 I would run these commands from my laptop (NOT logged into Hyak)
 
@@ -143,7 +143,7 @@ it we must specifically use that python on Hyak. To do so, use:
 To see which versions of anaconda are available, use the module avail command (To filter out non-anaconda stuff use "module avail | grep anaconda").
 Once we have anaconda, we can create a conda environment using:
 
-conda create -n environment_name
+```conda create -n environment_name```
 
 This creates a folder `/usr/lusers/user_name/.conda/envs/environment_name` where all your software will be downloaded to. To download software (i.e. Python libraries) we can use the following
 command:
@@ -246,9 +246,8 @@ Before we discuss the commands, lets discuss two different types of Jobs.
 
 #### Interactive Mode
 
-Interactive mode allows you to run commands one at a time through the terminal. It will essentially be exactly like simply using a terminal, but all the operations you powerful nodes. This is helpful for trying to see if your code can run or has any bugs,
-but should only be used for short and quick runs really as it requires you to be constantly connected to Hyak. If for some reason you lose connection (wifi drops, you close your laptop, etc) your commands will stop running: all the same issues of running stuff on your laptop.
-I use it sometimes to check that my code runs and does not have any bugs. However, if you know your code works and just need to run through the simulation/data analysis, I would recommend using batch mode instead.
+Interactive mode allows you to run commands one at a time through the terminal. It will essentially be exactly like simply using a terminal, but all the operations you do are on powerful nodes. This is helpful for trying to see if your code can run or has any bugs,
+but should only be used for short and quick runs really as it requires you to be constantly connected to Hyak. If for some reason you lose connection (wifi drops, you close your laptop, etc) your commands will stop running: all the same issues of running stuff on your laptop. However, if you know your code works and just need to run through the simulation/data analysis, I would recommend using batch mode instead.
 Interactive mode is also what you want to use when you are trying to download software as discussed in the section above. To do this, you will run interactive mode on a build node which we will discuss how to use below.
 
 #### Batch Mode
