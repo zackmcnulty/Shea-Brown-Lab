@@ -313,7 +313,21 @@ where in the job_script you specify you are using the ckpt account/partition we 
 
 More information can be found [here](https://wiki.cac.washington.edu/display/hyakusers/Mox_scheduler) on how to choose these settings and what they all mean.
 The Hyak wiki in general is a good source of information. I have created some [templates](https://github.com/zackmcnulty/Shea-Brown-Lab/tree/master/RNN_latent_structure/learning_materials/batch_templates), but these are
-specifically for the STF group. Below is a full example of a batch script.
+specifically for the STF group. Here's the gist of what account/partition to use if you are in the STF group:
+
+* Standard Node: `--account=stf --partition=stf
+* Interactive Node: `--account=stf  --partition=stf-int`
+* GPU Node: `--account=stf --partition=stf-gpu`
+* Interactive GPU Node: `--account=stf --partition=stf-int-gpu`
+* Backfill Node: `--account=stf-ckpt --partition=stf-ckpt`
+
+Again, if you need specific resources (like a GPU maybe) you can add additional flags to your sbatch command to get them. For example:
+
+``` 
+    sbatch job_script.slurm --gres=gpu:P100:1
+```
+
+Below is a full example of a batch script.
 
 
 
